@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi"
+	"github.com/aep-dev/terraform-provider-aep/openapi"
 	"github.com/go-openapi/loads"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"

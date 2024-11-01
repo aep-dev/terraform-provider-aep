@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi/openapierr"
+	"github.com/aep-dev/terraform-provider-aep/openapi/openapierr"
 	"io/ioutil"
 	"net/http"
 	"strings"

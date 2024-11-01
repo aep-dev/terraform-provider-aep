@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aep-dev/terraform-provider-openapi/openapi/terraformutils"
+	"github.com/aep-dev/terraform-provider-aep/openapi/terraformutils"
 )
 
 type specAPIKeyHeaderRefreshTokenSecurityDefinition struct {

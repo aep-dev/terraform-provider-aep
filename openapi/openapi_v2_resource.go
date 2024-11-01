@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aep-dev/terraform-provider-openapi/openapi/openapiutils"
+	"github.com/aep-dev/terraform-provider-aep/openapi/openapiutils"
 	"github.com/go-openapi/spec"
 )
 

@@ -3,7 +3,7 @@ package openapi
 import (
 	"errors"
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi/openapierr"
+	"github.com/aep-dev/terraform-provider-aep/openapi/openapierr"
 	"github.com/go-openapi/spec"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"

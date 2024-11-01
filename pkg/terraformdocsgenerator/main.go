@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/aep-dev/terraform-provider-openapi/pkg/terraformdocsgenerator/openapiterraformdocsgenerator"
+	"github.com/aep-dev/terraform-provider-aep/pkg/terraformdocsgenerator/openapiterraformdocsgenerator"
 	"log"
 	"os"
 )

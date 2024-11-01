@@ -1,7 +1,7 @@
 package integration
 
 import (
-	"github.com/aep-dev/terraform-provider-openapi/openapi"
+	"github.com/aep-dev/terraform-provider-aep/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
 	"os"

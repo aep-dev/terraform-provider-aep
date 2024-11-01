@@ -2,7 +2,7 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi"
+	"github.com/aep-dev/terraform-provider-aep/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/stretchr/testify/assert"

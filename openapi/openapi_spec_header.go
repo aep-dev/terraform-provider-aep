@@ -1,6 +1,6 @@
 package openapi
 
-import "github.com/aep-dev/terraform-provider-openapi/openapi/terraformutils"
+import "github.com/aep-dev/terraform-provider-aep/openapi/terraformutils"
 
 // SpecHeaderParameters groups a list of SpecHeaderParam
 type SpecHeaderParameters []SpecHeaderParam
