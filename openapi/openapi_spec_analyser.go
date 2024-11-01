@@ -8,8 +8,9 @@ import (
 // be used as terraform resources. These endpoints have to meet certain criteria to be considered eligible resources
 // as explained below:
 // A resource is considered any end point that meets the following:
-// 	- POST operation on the root path (e,g: api/users)
-//	- GET operation on the instance path (e,g: api/users/{id}). Other operations like DELETE, PUT are optional
+//   - POST operation on the root path (e,g: api/users)
+//   - GET operation on the instance path (e,g: api/users/{id}). Other operations like DELETE, PATCH are optional
+//
 // In the example above, the resource name would be 'users'.
 // Versioning is also supported, thus if the endpoint above had been api/v1/users the corresponding resouce name would
 // have been 'users_v1'
