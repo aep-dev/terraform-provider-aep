@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/aep-dev/terraform-provider-openapi/v3/openapi/openapierr"
+	"github.com/aep-dev/terraform-provider-openapi/openapi/openapierr"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 

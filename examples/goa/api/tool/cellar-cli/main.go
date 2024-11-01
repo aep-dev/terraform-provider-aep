@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/v3/examples/goa/api/client"
-	"github.com/aep-dev/terraform-provider-openapi/v3/examples/goa/api/tool/cli"
+	"github.com/aep-dev/terraform-provider-openapi/examples/goa/api/client"
+	"github.com/aep-dev/terraform-provider-openapi/examples/goa/api/tool/cli"
 	goaclient "github.com/goadesign/goa/client"
 	"github.com/spf13/cobra"
 	"net/http"

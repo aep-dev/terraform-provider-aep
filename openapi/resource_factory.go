@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aep-dev/terraform-provider-openapi/v3/openapi/openapierr"
+	"github.com/aep-dev/terraform-provider-openapi/openapi/openapierr"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )

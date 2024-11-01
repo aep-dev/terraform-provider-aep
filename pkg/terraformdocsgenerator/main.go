@@ -14,7 +14,7 @@ func main() {
 	// plugins to be located at. Terraform 0.12 and Terraform >=0.13 have different requirements in terms of where the custom plugins should be
 	// installed. The following script may be used to automate the plugin provisioning task which depending on what version of Terraform the
 	// user is using the plugin will be installed accordingly in the expected location for Terraform:
-	// https://github.com/aep-dev/terraform-provider-openapi/v3/blob/master/scripts/install.sh
+	// https://github.com/aep-dev/terraform-provider-openapi/blob/master/scripts/install.sh
 	// The NewTerraformProviderDocGenerator requires the provider name to be passed in, as well as the hostname and namespace which are used
 	// to render the provider installation section containing the required_providers block with the source address configuration in the form of [<HOSTNAME>/]<NAMESPACE>/<TYPE>
 	terraformProviderDocGenerator, err := openapiterraformdocsgenerator.NewTerraformProviderDocGenerator(providerName, "terraform.example.com", "examplecorp", openAPIDocURL)

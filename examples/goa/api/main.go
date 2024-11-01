@@ -1,9 +1,9 @@
-//go:generate goagen bootstrap -d github.com/aep-dev/terraform-provider-openapi/v3/examples/goa/api/design
+//go:generate goagen bootstrap -d github.com/aep-dev/terraform-provider-openapi/examples/goa/api/design
 
 package main
 
 import (
-	"github.com/aep-dev/terraform-provider-openapi/v3/examples/goa/api/app"
+	"github.com/aep-dev/terraform-provider-openapi/examples/goa/api/app"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
 )
