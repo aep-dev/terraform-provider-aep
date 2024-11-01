@@ -123,7 +123,7 @@ by the API for the resource was ```1234```. Now it's time to provision ```openap
 so when the OpenAPI plugin is called the ```cdns_v1_id``` property would have been populated with ```1234``` and internally
 the provider will make use of this value to build the firewall URI accordingly ```/v1/cdns/1234/v1/firewalls/``` and perform
 the corresponding operation (e,g: POST). The same thing applies to any other operation exposed by the resource like
-GET, PUT or DELETE.
+GET, PATCH or DELETE.
 
 ### Are multiple level subsources also supported?
 

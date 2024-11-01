@@ -2,16 +2,16 @@ package openapi
 
 import (
 	"fmt"
-	"github.com/aep-dev/terraform-provider-aep/openapi/version"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/aep-dev/terraform-provider-aep/openapi/version"
 
 	"github.com/aep-dev/terraform-provider-aep/openapi/terraformutils"
 
 	"log"
 
-	"github.com/dikhan/http_goclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -207,9 +207,9 @@ func (p providerFactory) createTerraformProviderDataSourceMap() (map[string]*sch
 }
 
 // createTerraformProviderResourceMapAndDataSourceInstanceMap is responsible for building the following:
-// - a map containing the resources that are terraform compatible
-// - a map containing the data sources from the resources that are terraform compatible. This data sources enable data
-//  source configuration on the resource instance GET operation.
+//   - a map containing the resources that are terraform compatible
+//   - a map containing the data sources from the resources that are terraform compatible. This data sources enable data
+//     source configuration on the resource instance GET operation.
 func (p providerFactory) createTerraformProviderResourceMapAndDataSourceInstanceMap() (resourceMap, dataSourceInstanceMap map[string]*schema.Resource, err error) {
 	resourceMap = map[string]*schema.Resource{}
 	dataSourceInstanceMap = map[string]*schema.Resource{}
@@ -275,7 +275,7 @@ func (p providerFactory) configureProvider(openAPIBackendConfiguration SpecBacke
 		openAPIClient := &ProviderClient{
 			openAPIBackendConfiguration: openAPIBackendConfiguration,
 			apiAuthenticator:            authenticator,
-			httpClient:                  &http_goclient.HttpClient{HttpClient: &http.Client{}},
+			httpClient:                  &http.Client{},
 			providerConfiguration:       *config,
 			telemetryHandler:            telemetryHandler,
 		}

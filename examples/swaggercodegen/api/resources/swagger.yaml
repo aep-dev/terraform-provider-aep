@@ -531,8 +531,8 @@ definitions:
           - deleted
       timeToProcess: # time that the resource will take to be processed in seconds
         type: integer
-        default: 60 # it will take two minute to process the resource operation (POST/PUT/READ/DELETE)
-      simulate_failure: # allows user to set it to true and force an error on the API when the given operation (POST/PUT/READ/DELETE) is being performed
+        default: 60 # it will take two minute to process the resource operation (POST/PATCH/READ/DELETE)
+      simulate_failure: # allows user to set it to true and force an error on the API when the given operation (POST/PATCH/READ/DELETE) is being performed
         type: boolean
       newStatus:
         $ref: "#/definitions/Status"

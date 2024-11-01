@@ -3356,7 +3356,7 @@ definitions:
 	})
 
 	// This is the ideal case where the resource exposes al CRUD operations
-	Convey("Given an specV2Analyser with an resource instance path such as '/users/{id}' that has a GET/PUT/DELETE operations exposed and the corresponding resource root path '/users' exposes a POST operation", t, func() {
+	Convey("Given an specV2Analyser with an resource instance path such as '/users/{id}' that has a GET/PATCH/DELETE operations exposed and the corresponding resource root path '/users' exposes a POST operation", t, func() {
 		swaggerContent := `swagger: "2.0"
 paths:
   /users:
@@ -4096,11 +4096,11 @@ definitions:
 				resourcePath, err := firewallV1Resource.getResourcePath([]string{parentID})
 				So(err, ShouldBeNil)
 				So(resourcePath, ShouldEqual, "/v1/cdns/42/v1/firewalls")
-				// the firewall resource operations are attached to the resource schema (GET,POST,PUT,DELETE) as stated in the YAML
+				// the firewall resource operations are attached to the resource schema (GET,POST,PATCH,DELETE) as stated in the YAML
 				resOperation := firewallV1Resource.getResourceOperations()
 				So(resOperation.Get.responses, ShouldContainKey, 200)
 				So(resOperation.Post.responses, ShouldContainKey, 201)
-				So(resOperation.Put.responses, ShouldContainKey, 200)
+				So(resOperation.Patch.responses, ShouldContainKey, 200)
 				So(resOperation.Delete.responses, ShouldContainKey, 204)
 				// each firewall operation exposed on the resource has its own timeout set
 				timeoutSpec, err := firewallV1Resource.getTimeouts()
@@ -4184,11 +4184,11 @@ definitions:
 				subRes := cndV1Resource.GetParentResourceInfo()
 				So(err, ShouldBeNil)
 				So(subRes, ShouldBeNil)
-				// the resource operations are attached to the resource schema (GET,POST,PUT,DELETE) as stated in the YAML
+				// the resource operations are attached to the resource schema (GET,POST,PATCH,DELETE) as stated in the YAML
 				resOperation := cndV1Resource.getResourceOperations()
 				So(resOperation.Get.responses, ShouldContainKey, 200)
 				So(resOperation.Post.responses, ShouldContainKey, 201)
-				So(resOperation.Put, ShouldBeNil)
+				So(resOperation.Patch, ShouldBeNil)
 				So(resOperation.Delete, ShouldBeNil)
 				// each operation exposed on the resource has a nil timeout
 				timeoutSpec, err := cndV1Resource.getTimeouts()
@@ -4309,11 +4309,11 @@ definitions:
 				// the cndV1Resource should not be considered a subresource
 				subRes := cndV1Resource.GetParentResourceInfo()
 				So(subRes, ShouldBeNil)
-				// the resource operations are attached to the resource schema (GET,POST,PUT,DELETE) as stated in the YAML
+				// the resource operations are attached to the resource schema (GET,POST,PATCH,DELETE) as stated in the YAML
 				resOperation := cndV1Resource.getResourceOperations()
 				So(resOperation.Get.responses, ShouldContainKey, 200)
 				So(resOperation.Post.responses, ShouldContainKey, 201)
-				So(resOperation.Put.responses, ShouldContainKey, 200)
+				So(resOperation.Patch.responses, ShouldContainKey, 200)
 				So(resOperation.Delete.responses, ShouldContainKey, 204)
 				// each operation exposed on the resource has it own timeout set
 				timeoutSpec, err := cndV1Resource.getTimeouts()

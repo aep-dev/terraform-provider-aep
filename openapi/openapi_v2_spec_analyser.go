@@ -152,7 +152,7 @@ func (specAnalyser *specV2Analyser) GetAPIBackendConfiguration() (SpecBackendCon
 
 // isEndPointFullyTerraformResourceCompliant returns true only if:
 // - The path given 'resourcePath' is an instance path (e,g: "/users/{username}")
-// - The path given has GET operation defined (required). PUT and DELETE are optional
+// - The path given has GET operation defined (required). PATCH and DELETE are optional
 // - The root path for the given path 'resourcePath' is found (e,g: "/users")
 // - The root path for the given path 'resourcePath' has mandatory POST operation defined
 // - The root path POST operation for the given path 'resourcePath' has a parameter of type 'body' with a schema property referencing to an existing definition object or defining the schema inline (in which case the properties must be all input either required or optional properties)
@@ -163,44 +163,48 @@ func (specAnalyser *specV2Analyser) GetAPIBackendConfiguration() (SpecBackendCon
 // For more info about the requirements: https://github.com/dikhan/terraform-provider-openapi/blob/master/docs/how_to.md#terraform-compliant-resource-requirements
 // For instance, if resourcePath was "/users/{id}" and paths contained the following entries and implementations:
 // paths:
-//   /v1/users:
-//     post:
-//		 parameters:
-//		 - in: "body"
-//		   name: "body"
-//		   description: "user to create"
-//		   required: true
-//		   schema:
-//		     $ref: "#/definitions/User"
-//		 responses:
-//		   201:
-//		     description: "successful operation"
-//		     schema:
-//		       $ref: "#/definitions/User"
-//   /v1/users/{id}:
-//	   get:
-//	     parameters:
-//	       - name: "id"
-//	         in: "path"
-//	         description: "The user id that needs to be fetched"
-//	         required: true
-//	         type: "string"
-//	     responses:
-//	       200:
-//	      	 description: "successful operation"
-//	         schema:
-//	           $ref: "#/definitions/User"
+//
+//	  /v1/users:
+//	    post:
+//			 parameters:
+//			 - in: "body"
+//			   name: "body"
+//			   description: "user to create"
+//			   required: true
+//			   schema:
+//			     $ref: "#/definitions/User"
+//			 responses:
+//			   201:
+//			     description: "successful operation"
+//			     schema:
+//			       $ref: "#/definitions/User"
+//	  /v1/users/{id}:
+//		   get:
+//		     parameters:
+//		       - name: "id"
+//		         in: "path"
+//		         description: "The user id that needs to be fetched"
+//		         required: true
+//		         type: "string"
+//		     responses:
+//		       200:
+//		      	 description: "successful operation"
+//		         schema:
+//		           $ref: "#/definitions/User"
+//
 // definitions:
-//   Users:
-//     type: "object"
-//     required:
-//       - name
-//     properties:
-//       id:
-//         type: "string"
-//         readOnly: true
-//       name:
-//         type: "string"
+//
+//	Users:
+//	  type: "object"
+//	  required:
+//	    - name
+//	  properties:
+//	    id:
+//	      type: "string"
+//	      readOnly: true
+//	    name:
+//	      type: "string"
+//
 // then the expected returned value is true. Otherwise if the above criteria is not met, it is considered that
 // the resourcePath provided is not terraform resource compliant.
 func (specAnalyser *specV2Analyser) isEndPointFullyTerraformResourceCompliant(resourcePath string) (string, *spec.PathItem, *spec.Schema, error) {

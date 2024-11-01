@@ -1,15 +1,16 @@
 package openapi
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"runtime"
 	"strings"
 
 	"github.com/aep-dev/terraform-provider-aep/openapi/version"
-
-	"github.com/dikhan/http_goclient"
 )
 
 type httpMethodSupported string
@@ -17,14 +18,14 @@ type httpMethodSupported string
 const (
 	httpGet    httpMethodSupported = "GET"
 	httpPost   httpMethodSupported = "POST"
-	httpPut    httpMethodSupported = "PUT"
+	httpPatch  httpMethodSupported = "PATCH"
 	httpDelete httpMethodSupported = "DELETE"
 )
 
 // ClientOpenAPI defines the behaviour expected to be implemented for the OpenAPI Client used in the Terraform OpenAPI Provider
 type ClientOpenAPI interface {
 	Post(resource SpecResource, requestPayload interface{}, responsePayload interface{}, parentIDs ...string) (*http.Response, error)
-	Put(resource SpecResource, id string, requestPayload interface{}, responsePayload interface{}, parentIDs ...string) (*http.Response, error)
+	Patch(resource SpecResource, id string, requestPayload interface{}, responsePayload interface{}, parentIDs ...string) (*http.Response, error)
 	Get(resource SpecResource, id string, responsePayload interface{}, parentIDs ...string) (*http.Response, error)
 	Delete(resource SpecResource, id string, parentIDs ...string) (*http.Response, error)
 	List(resource SpecResource, responsePayload interface{}, parentIDs ...string) (*http.Response, error)
@@ -36,7 +37,7 @@ type ClientOpenAPI interface {
 // the API when making the HTTP requests
 type ProviderClient struct {
 	openAPIBackendConfiguration SpecBackendConfiguration
-	httpClient                  http_goclient.HttpClientIface
+	httpClient                  *http.Client
 	providerConfiguration       providerConfiguration
 	apiAuthenticator            specAuthenticator
 	telemetryHandler            TelemetryHandler
@@ -52,14 +53,14 @@ func (o *ProviderClient) Post(resource SpecResource, requestPayload interface{},
 	return o.performRequest(httpPost, resourceURL, operation, requestPayload, responsePayload)
 }
 
-// Put performs a PUT request to the server API based on the resource configuration and the payload passed in
-func (o *ProviderClient) Put(resource SpecResource, id string, requestPayload interface{}, responsePayload interface{}, parentIDs ...string) (*http.Response, error) {
+// Patch performs a PATCH request to the server API based on the resource configuration and the payload passed in
+func (o *ProviderClient) Patch(resource SpecResource, id string, requestPayload interface{}, responsePayload interface{}, parentIDs ...string) (*http.Response, error) {
 	resourceURL, err := o.getResourceIDURL(resource, parentIDs, id)
 	if err != nil {
 		return nil, err
 	}
-	operation := resource.getResourceOperations().Put
-	return o.performRequest(httpPut, resourceURL, operation, requestPayload, responsePayload)
+	operation := resource.getResourceOperations().Patch
+	return o.performRequest(httpPatch, resourceURL, operation, requestPayload, responsePayload)
 }
 
 // Get performs a GET request to the server API based on the resource configuration and the resource instance id passed in
@@ -114,17 +115,45 @@ func (o *ProviderClient) performRequest(method httpMethodSupported, resourceURL 
 
 	o.logHeadersSafely(reqContext.headers)
 
-	switch method {
-	case httpPost:
-		return o.httpClient.PostJson(reqContext.url, reqContext.headers, requestPayload, responsePayload)
-	case httpPut:
-		return o.httpClient.PutJson(reqContext.url, reqContext.headers, requestPayload, responsePayload)
-	case httpGet:
-		return o.httpClient.Get(reqContext.url, reqContext.headers, responsePayload)
-	case httpDelete:
-		return o.httpClient.Delete(reqContext.url, reqContext.headers)
+	var body []byte
+	if requestPayload != nil {
+		body, err = json.Marshal(requestPayload)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return nil, fmt.Errorf("method '%s' not supported", method)
+
+	req, err := http.NewRequest(fmt.Sprintf("%s", method), reqContext.url, strings.NewReader(string(body)))
+	if err != nil {
+		return nil, err
+	}
+
+	for key, value := range reqContext.headers {
+		req.Header.Set(key, value)
+	}
+
+	resp, err := o.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if responsePayload != nil {
+		var body []byte
+		if body, err = io.ReadAll(resp.Body); err != nil {
+			return nil, err
+		}
+		resp.Body.Close()                               // close stream so connection is closed gracefully
+		resp.Body = io.NopCloser(bytes.NewReader(body)) // create a new reader from bytes read in the response and set the response body (allowing the client to still be able to do res.Body afterwards)
+		if len(body) > 0 {
+			if err = json.Unmarshal(body, &responsePayload); err != nil {
+				return resp, fmt.Errorf("unable to unmarshal response body ['%s'] for request = '%s %s %s'. Response = '%s'", err.Error(), req.Method, req.URL, req.Proto, resp.Status)
+			}
+		} else {
+			return resp, fmt.Errorf("expected a response body but response body received was empty for request = '%s %s %s'. Response = '%s'", req.Method, req.URL, req.Proto, resp.Status)
+		}
+	}
+
+	return resp, nil
 }
 
 func (o *ProviderClient) appendUserAgentHeader(headers map[string]string, value string) {

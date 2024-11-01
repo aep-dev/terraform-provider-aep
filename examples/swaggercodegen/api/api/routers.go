@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 type Route struct {
@@ -69,7 +70,7 @@ var routes = Routes{
 
 	Route{
 		"ContentDeliveryNetworkUpdateV1",
-		strings.ToUpper("Put"),
+		strings.ToUpper("Patch"),
 		"/v1/cdns/{id}",
 		ContentDeliveryNetworkUpdateV1,
 	},
@@ -104,7 +105,7 @@ var routes = Routes{
 
 	Route{
 		"LBUpdateV1",
-		strings.ToUpper("Put"),
+		strings.ToUpper("Patch"),
 		"/v1/lbs/{id}",
 		LBUpdateV1,
 	},
