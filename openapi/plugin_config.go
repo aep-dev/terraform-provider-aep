@@ -3,7 +3,7 @@ package openapi
 import (
 	"bufio"
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi/terraformutils"
+	"github.com/aep-dev/terraform-provider-aep/openapi/terraformutils"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
