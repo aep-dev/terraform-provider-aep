@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/aep-dev/terraform-provider-openapi/openapi/version"
+	"github.com/aep-dev/terraform-provider-aep/openapi/version"
 
 	"github.com/dikhan/http_goclient"
 )

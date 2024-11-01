@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aep-dev/terraform-provider-openapi/openapi"
+	"github.com/aep-dev/terraform-provider-aep/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/stretchr/testify/assert"
 )

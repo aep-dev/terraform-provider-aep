@@ -2,7 +2,7 @@ package openapi
 
 import (
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi/terraformutils"
+	"github.com/aep-dev/terraform-provider-aep/openapi/terraformutils"
 )
 
 // specAPIKeyHeaderSecurityDefinition defines a security definition. This struct serves as a translation between the OpenAPI document

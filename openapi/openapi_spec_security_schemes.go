@@ -1,6 +1,6 @@
 package openapi
 
-import "github.com/aep-dev/terraform-provider-openapi/openapi/terraformutils"
+import "github.com/aep-dev/terraform-provider-aep/openapi/terraformutils"
 
 // SpecSecuritySchemes groups a list of SpecSecurityScheme
 type SpecSecuritySchemes []SpecSecurityScheme

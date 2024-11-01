@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi/version"
+	"github.com/aep-dev/terraform-provider-aep/openapi/version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"

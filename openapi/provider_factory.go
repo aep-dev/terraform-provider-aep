@@ -2,12 +2,12 @@ package openapi
 
 import (
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/openapi/version"
+	"github.com/aep-dev/terraform-provider-aep/openapi/version"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/aep-dev/terraform-provider-openapi/openapi/terraformutils"
+	"github.com/aep-dev/terraform-provider-aep/openapi/terraformutils"
 
 	"log"
 

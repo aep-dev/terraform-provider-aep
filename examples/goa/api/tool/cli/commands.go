@@ -4,8 +4,8 @@
 //
 // Command:
 // $ goagen
-// --design=github.com/aep-dev/terraform-provider-openapi/examples/goa/api/design
-// --out=$(GOPATH)/src/github.com/aep-dev/terraform-provider-openapi/examples/goa/api
+// --design=github.com/aep-dev/terraform-provider-aep/examples/goa/api/design
+// --out=$(GOPATH)/src/github.com/aep-dev/terraform-provider-aep/examples/goa/api
 // --version=v1.3.1
 
 package cli
@@ -14,7 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aep-dev/terraform-provider-openapi/examples/goa/api/client"
+	"github.com/aep-dev/terraform-provider-aep/examples/goa/api/client"
 	"github.com/goadesign/goa"
 	goaclient "github.com/goadesign/goa/client"
 	uuid "github.com/goadesign/goa/uuid"

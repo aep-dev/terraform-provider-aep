@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/aep-dev/terraform-provider-openapi/examples/goa/api/app"
+	"github.com/aep-dev/terraform-provider-aep/examples/goa/api/app"
 	"github.com/goadesign/goa"
 	"github.com/hashicorp/go-uuid"
 )
