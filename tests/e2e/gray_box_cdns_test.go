@@ -408,7 +408,7 @@ func (a *api) apiPutResponse(t *testing.T, w http.ResponseWriter, r *http.Reques
 		a.cachePayloads[r.RequestURI] = `{"id":1337, "label":"updatedFWLabel"}`
 		a.apiResponse(t, `{"label":"updatedFWLabel"}`, http.StatusOK, w, r)
 	} else {
-		assert.Fail(t, fmt.Sprintf("no PUT implementation in apiServer for %s", cachedBody))
+		assert.Fail(t, fmt.Sprintf("no PATCH implementation in apiServer for %s", cachedBody))
 	}
 
 }

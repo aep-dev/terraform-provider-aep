@@ -93,14 +93,14 @@ func (s *SpecSchemaDefinition) getImmutableProperties() []string {
 	return immutableProperties
 }
 
-//// getResourceIdentifier returns the property name that is supposed to be used as the identifier. The resource id
-//// is selected as follows:
-//// 1.If the given schema definition contains a property configured with metadata 'x-terraform-id' set to true, that property value
-//// will be used to set the state ID of the resource. Additionally, the value will be used when performing GET/PUT/DELETE requests to
-//// identify the resource in question.
-//// 2. If none of the properties of the given schema definition contain such metadata, it is expected that the payload
-//// will have a property named 'id'
-//// 3. If none of the above requirements is met, an error will be returned
+// // getResourceIdentifier returns the property name that is supposed to be used as the identifier. The resource id
+// // is selected as follows:
+// // 1.If the given schema definition contains a property configured with metadata 'x-terraform-id' set to true, that property value
+// // will be used to set the state ID of the resource. Additionally, the value will be used when performing GET/PATCH/DELETE requests to
+// // identify the resource in question.
+// // 2. If none of the properties of the given schema definition contain such metadata, it is expected that the payload
+// // will have a property named 'id'
+// // 3. If none of the above requirements is met, an error will be returned
 func (s *SpecSchemaDefinition) getResourceIdentifier() (string, error) {
 	identifierProperty := ""
 	for _, property := range s.Properties {

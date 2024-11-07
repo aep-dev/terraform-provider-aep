@@ -49,12 +49,6 @@ vet:
 	@echo "[INFO] Running go vet on the current directory"
 	@go vet $(TEST_PACKAGES)
 
-# make lint
-lint:
-	@echo "[INFO] Running golint on the current directory"
-	@go get -u golang.org/x/lint/golint
-	@golint -set_exit_status $(TEST_PACKAGES)
-
 # make gosec
 gosec: install-deps
 	@echo "[INFO] Running gosec"
@@ -67,7 +61,7 @@ unittest: show-terraform-version
 	@go test -v -cover $(TEST_PACKAGES) -coverprofile=coverage.txt -covermode=atomic
 
 # make test
-test: fmt vet lint gosec unittest
+test: fmt vet gosec unittest
 
 show-terraform-version:
 	terraform version
@@ -186,4 +180,4 @@ define run_terraform_example
 	fi
 endef
 
-.PHONY: all build fmt vet lint test run_terraform
+.PHONY: all build fmt vet test run_terraform

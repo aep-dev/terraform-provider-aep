@@ -10,7 +10,7 @@ type specStubResource struct {
 	resourceGetOperation    *specResourceOperation
 	resourcePostOperation   *specResourceOperation
 	resourceListOperation   *specResourceOperation
-	resourcePutOperation    *specResourceOperation
+	resourcePatchOperation  *specResourceOperation
 	resourceDeleteOperation *specResourceOperation
 	timeouts                *specTimeouts
 
@@ -36,7 +36,7 @@ func newSpecStubResourceWithOperations(name, path string, shouldIgnore bool, sch
 		resourcePostOperation:   resourcePostOperation,
 		resourceGetOperation:    resourceGetOperation,
 		resourceDeleteOperation: resourceDeleteOperation,
-		resourcePutOperation:    resourcePutOperation,
+		resourcePatchOperation:  resourcePutOperation,
 		timeouts:                &specTimeouts{},
 	}
 }
@@ -67,7 +67,7 @@ func (s *specStubResource) getResourceOperations() specResourceOperations {
 		List:   s.resourceListOperation,
 		Post:   s.resourcePostOperation,
 		Get:    s.resourceGetOperation,
-		Put:    s.resourcePutOperation,
+		Patch:  s.resourcePatchOperation,
 		Delete: s.resourceDeleteOperation,
 	}
 }

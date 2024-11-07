@@ -77,7 +77,7 @@ type SpecV2Resource struct {
 	SchemaDefinition spec.Schema
 	// RootPathItem contains info about the resource root path e,g: /resource, including the POST operation used to create instances of this resource
 	RootPathItem spec.PathItem
-	// InstancePathItem contains info about the resource's instance /resource/{id}, including GET, PUT and REMOVE operations if applicable
+	// InstancePathItem contains info about the resource's instance /resource/{id}, including GET, PATCH and REMOVE operations if applicable
 	InstancePathItem spec.PathItem
 
 	// SchemaDefinitions contains all the definitions which might be needed in case the resource schema contains properties
@@ -256,7 +256,7 @@ func (o *SpecV2Resource) getResourceOperations() specResourceOperations {
 		List:   o.createResourceOperation(o.RootPathItem.Get),
 		Post:   o.createResourceOperation(o.RootPathItem.Post),
 		Get:    o.createResourceOperation(o.InstancePathItem.Get),
-		Put:    o.createResourceOperation(o.InstancePathItem.Put),
+		Patch:  o.createResourceOperation(o.InstancePathItem.Put),
 		Delete: o.createResourceOperation(o.InstancePathItem.Delete),
 	}
 }
@@ -542,8 +542,9 @@ func (o *SpecV2Resource) isOptionalComputedProperty(propertyName string, propert
 // by specifying the default attribute. Example:
 //
 // optional_computed_with_default:  # optional property that the default value is known at runtime, hence service provider documents it
-//  type: "string"
-//  default: “some known default value”
+//
+//	type: "string"
+//	default: “some known default value”
 func (o *SpecV2Resource) isOptionalComputedWithDefault(propertyName string, property spec.Schema) (bool, error) {
 	if !property.ReadOnly && property.Default != nil {
 		if o.isBoolExtensionEnabled(property.Extensions, extTfComputed) {
@@ -558,8 +559,9 @@ func (o *SpecV2Resource) isOptionalComputedWithDefault(propertyName string, prop
 // This covers the use case where a property is not marked as readOnly but still is optional value that can come from the user or if not provided will be computed by the API. Example
 //
 // optional_computed: # optional property that the default value is NOT known at runtime
-//  type: "string"
-//  x-terraform-computed: true
+//
+//	type: "string"
+//	x-terraform-computed: true
 func (o *SpecV2Resource) isOptionalComputed(propertyName string, property spec.Schema) (bool, error) {
 	if o.isBoolExtensionEnabled(property.Extensions, extTfComputed) {
 		if property.ReadOnly {
