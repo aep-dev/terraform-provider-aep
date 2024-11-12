@@ -522,17 +522,12 @@ func Test_mergeRequestAndResponseSchemas(t *testing.T) {
 			responseSchema: &spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
-						"identifier_property": {
+						"id": {
 							SwaggerSchemaProps: spec.SwaggerSchemaProps{
 								ReadOnly: true,
 							},
 							SchemaProps: spec.SchemaProps{
 								Type: spec.StringOrArray{"string"},
-							},
-							VendorExtensible: spec.VendorExtensible{
-								Extensions: spec.Extensions{
-									extTfID: true,
-								},
 							},
 						},
 						"required_prop": {
@@ -550,17 +545,12 @@ func Test_mergeRequestAndResponseSchemas(t *testing.T) {
 				SchemaProps: spec.SchemaProps{
 					Required: []string{"required_prop"},
 					Properties: map[string]spec.Schema{
-						"identifier_property": {
+						"id": {
 							SwaggerSchemaProps: spec.SwaggerSchemaProps{
 								ReadOnly: true,
 							},
 							SchemaProps: spec.SchemaProps{
 								Type: spec.StringOrArray{"string"},
-							},
-							VendorExtensible: spec.VendorExtensible{
-								Extensions: spec.Extensions{
-									extTfID: true,
-								},
 							},
 						},
 						"required_prop": {
@@ -2409,12 +2399,8 @@ func TestValidateResourceSchemaDefWithOptions(t *testing.T) {
 			schema := &spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
-						"name": {
-							VendorExtensible: spec.VendorExtensible{
-								Extensions: spec.Extensions{
-									extTfID: true,
-								},
-							},
+						"id": {
+							VendorExtensible: spec.VendorExtensible{},
 						},
 					},
 				},
@@ -2429,13 +2415,6 @@ func TestValidateResourceSchemaDefWithOptions(t *testing.T) {
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
 						"id": {},
-						"name": {
-							VendorExtensible: spec.VendorExtensible{
-								Extensions: spec.Extensions{
-									extTfID: true,
-								},
-							},
-						},
 					},
 				},
 			}

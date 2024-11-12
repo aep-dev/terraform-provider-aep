@@ -3,11 +3,12 @@ package openapi
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/spec"
@@ -2196,26 +2197,6 @@ func TestCreateSchemaDefinitionProperty(t *testing.T) {
 				So(schemaDefinitionProperty.Sensitive, ShouldEqual, expectedSensitiveValue)
 				So(schemaDefinitionProperty.isComputed(), ShouldBeFalse)
 
-			})
-		})
-
-		Convey("When createSchemaDefinitionProperty is called with a property schema that has the 'x-terraform-id' extension", func() {
-			expectedIsIdentifierValue := true
-			propertySchema := spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Type: spec.StringOrArray{"string"},
-				},
-				VendorExtensible: spec.VendorExtensible{
-					Extensions: spec.Extensions{
-						extTfID: expectedIsIdentifierValue,
-					},
-				},
-			}
-			schemaDefinitionProperty, err := r.createSchemaDefinitionProperty("propertyName", propertySchema, []string{})
-			Convey("Then the error returned should be nil and the schemaDefinitionProperty should be configured as expected", func() {
-				So(err, ShouldBeNil)
-				So(schemaDefinitionProperty.IsIdentifier, ShouldEqual, expectedIsIdentifierValue)
-				So(schemaDefinitionProperty.isComputed(), ShouldBeFalse)
 			})
 		})
 
