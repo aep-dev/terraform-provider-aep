@@ -433,8 +433,6 @@ func (specAnalyser *specV2Analyser) validateResourceSchemaDefWithOptions(schema 
 	for propertyName, property := range schema.Properties {
 		if propertyName == "id" {
 			containsIdentifier = true
-		} else if exists, useAsIdentifier := property.Extensions.GetBool(extTfID); exists && useAsIdentifier {
-			containsIdentifier = true
 		}
 		if shouldPropBeReadOnly {
 			if property.ReadOnly == false {
@@ -443,7 +441,7 @@ func (specAnalyser *specV2Analyser) validateResourceSchemaDefWithOptions(schema 
 		}
 	}
 	if containsIdentifier == false {
-		return fmt.Errorf("resource schema is missing a property that uniquely identifies the resource, either a property named 'id' or a property with the extension '%s' set to true", extTfID)
+		return fmt.Errorf("resource schema is missing a property called 'id'")
 	}
 	return nil
 }

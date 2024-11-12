@@ -67,7 +67,7 @@ func (s *specSecurityStub) GetGlobalSecuritySchemes() (openapi.SpecSecuritySchem
 	return s.globalSecuritySchemes()
 }
 
-//specStubBackendConfiguration
+// specStubBackendConfiguration
 type specStubBackendConfiguration struct {
 	openapi.SpecBackendConfiguration
 	host    string
@@ -115,7 +115,7 @@ func (s *specStubResource) GetParentResourceInfo() *openapi.ParentResourceInfo {
 	return nil
 }
 
-//specStubSecurityDefinition
+// specStubSecurityDefinition
 type specStubSecurityDefinition struct {
 	openapi.SpecSecurityDefinition
 	name string

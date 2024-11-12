@@ -54,7 +54,6 @@ const extTfForceNew = "x-terraform-force-new"
 const extTfSensitive = "x-terraform-sensitive"
 const extTfFieldName = "x-terraform-field-name"
 const extTfFieldStatus = "x-terraform-field-status"
-const extTfID = "x-terraform-id"
 const extTfComputed = "x-terraform-computed"
 const extTfIgnoreOrder = "x-terraform-ignore-order"
 const extIgnoreOrder = "x-ignore-order"
@@ -479,9 +478,7 @@ func (o *SpecV2Resource) createSchemaDefinitionProperty(propertyName string, pro
 		schemaDefinitionProperty.Sensitive = true
 	}
 
-	// field with extTfID metadata takes preference over 'id' fields as the service provider is the one acknowledging
-	// the fact that this field should be used as identifier of the resource
-	if o.isBoolExtensionEnabled(property.Extensions, extTfID) {
+	if propertyName == "id" {
 		schemaDefinitionProperty.IsIdentifier = true
 	}
 
