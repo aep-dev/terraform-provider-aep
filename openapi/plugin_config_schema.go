@@ -26,13 +26,14 @@ type PluginConfigSchema interface {
 // Configuration example:
 // version: '1'
 // services:
-//   monitor:
-//     swagger-url: http://monitor-api.com/swagger.json
-//     insecure_skip_verify: true
-//   cdn:
-//     swagger-url: https://cdn-api.com/swagger.json
-//   vm:
-//     swagger-url: http://vm-api.com/swagger.json
+//
+//	monitor:
+//	  swagger-url: http://monitor-api.com/swagger.json
+//	  insecure_skip_verify: true
+//	cdn:
+//	  swagger-url: https://cdn-api.com/swagger.json
+//	vm:
+//	  swagger-url: http://vm-api.com/swagger.json
 type PluginConfigSchemaV1 struct {
 	Version  string                      `yaml:"version"`
 	Services map[string]*ServiceConfigV1 `yaml:"services"`

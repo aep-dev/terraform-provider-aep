@@ -44,10 +44,10 @@ type ServiceSchemaPropertyExternalConfigurationV1 struct {
 // when deciding what should be the default value of the property:
 // - if the property does not have external configuration ('schema_property_external_configuration') and it does have a 'default_value' is set, then value used will be the one specified in the 'default_value' field
 // - if the property has both the external configuration ('schema_property_external_configuration') and the 'default_value' fields set:
-//    - If 'file' field is populated then:
-//      - If the 'content_type' is raw the contents of the 'file' will be used as default value
-//      - If the 'content_type' is json then the content of the 'file' must be json structure and the default value used will be the one defined in the 'key_name'
-//    - An error is thrown otherwise
+//   - If 'file' field is populated then:
+//   - If the 'content_type' is raw the contents of the 'file' will be used as default value
+//   - If the 'content_type' is json then the content of the 'file' must be json structure and the default value used will be the one defined in the 'key_name'
+//   - An error is thrown otherwise
 func (s ServiceSchemaPropertyConfigurationV1) GetDefaultValue() (string, error) {
 	if &s.ExternalConfiguration != nil {
 		if s.ExternalConfiguration.File != "" {

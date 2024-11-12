@@ -58,7 +58,7 @@ gosec: install-deps
 # make unittest
 unittest: show-terraform-version
 	@echo "[INFO] Executing unit tests for $(TF_OPENAPI_PROVIDER_PLUGIN_NAME)"
-	@go test -v -cover $(TEST_PACKAGES) -coverprofile=coverage.txt -covermode=atomic
+	@go test -v -cover $(TEST_PACKAGES)
 
 # make test
 test: fmt vet gosec unittest
