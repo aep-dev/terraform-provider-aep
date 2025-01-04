@@ -11,6 +11,7 @@ require (
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
+	github.com/aep-dev/aep-lib-go v0.0.0-20241214201740-a1e57b9a0273 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
