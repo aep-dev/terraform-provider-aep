@@ -15,7 +15,13 @@ import (
 // CLI command executed to create a provider server to which the CLI can
 // reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"scaffolding": providerserver.NewProtocol6WithError(New("test")()),
+	"scaffolding": func() (tfprotov6.ProviderServer, error) {
+		gen, err := CreateGeneratedProviderData("testdata/oas.yaml")
+		if err != nil {
+			return nil, err
+		}
+		return providerserver.NewProtocol6WithError(New("test", gen)())()
+	},
 }
 
 func testAccPreCheck(t *testing.T) {
