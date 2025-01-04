@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -28,7 +26,9 @@ func NewExampleResource() resource.Resource {
 
 // ExampleResource defines the resource implementation.
 type ExampleResource struct {
-	client *http.Client
+	client   *http.Client
+	resource *api.Resource
+	name     string
 }
 
 // ExampleResourceModel describes the resource data model.
@@ -39,34 +39,36 @@ type ExampleResourceModel struct {
 }
 
 func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_example"
+	resp.TypeName = req.ProviderTypeName + "_" + r.name
 }
 
 func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Example resource",
+		// TODO: Add description.
+		MarkdownDescription: r.resource.Singular,
 
-		Attributes: map[string]schema.Attribute{
-			"configurable_attribute": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute",
-				Optional:            true,
-			},
-			"defaulted": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute with default value",
-				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString("example value when not configured"),
-			},
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Example identifier",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-		},
+		Attributes: r.schemaAttributes(),
 	}
+}
+
+func (r *ExampleResource) schemaAttributes() map[string]schema.Attribute {
+	var m := make(map[string]schema.Attribute)
+	for name, prop := range r.resource.Schema.Properties {
+		var a schema.Attribute
+		switch prop.Type {
+		case "number":
+			a = schema.NumberAttribute{}
+		case "string":
+			a = schema.StringAttribute{}
+		case "boolean":
+			a = schema.BoolAttribute{}
+		case "integer":
+			a = schema.Int64Attribute{}
+		}
+		m[name] = a
+	}
+	return m
 }
 
 func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
