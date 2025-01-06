@@ -53,7 +53,7 @@ func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest
 }
 
 func (r *ExampleResource) schemaAttributes() map[string]schema.Attribute {
-	var m := make(map[string]schema.Attribute)
+	m := make(map[string]schema.Attribute)
 	for name, prop := range r.resource.Schema.Properties {
 		var a schema.Attribute
 		switch prop.Type {
