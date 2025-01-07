@@ -20,6 +20,15 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
+func NewExampleResourceWithResource(r *api.Resource, n string) func() resource.Resource {
+	return func() resource.Resource {
+		return &ExampleResource{
+			resource: r,
+			name:     n,
+		}
+	}
+}
+
 func NewExampleResource() resource.Resource {
 	return &ExampleResource{}
 }
@@ -58,15 +67,30 @@ func (r *ExampleResource) schemaAttributes() map[string]schema.Attribute {
 		var a schema.Attribute
 		switch prop.Type {
 		case "number":
-			a = schema.NumberAttribute{}
+			a = schema.NumberAttribute{
+				MarkdownDescription: "",
+				Optional:            true,
+			}
+			m[name] = a
 		case "string":
-			a = schema.StringAttribute{}
+			a = schema.StringAttribute{
+				MarkdownDescription: "",
+				Optional:            true,
+			}
+			m[name] = a
 		case "boolean":
-			a = schema.BoolAttribute{}
+			a = schema.BoolAttribute{
+				MarkdownDescription: "",
+				Optional:            true,
+			}
+			m[name] = a
 		case "integer":
-			a = schema.Int64Attribute{}
+			a = schema.Int64Attribute{
+				MarkdownDescription: "",
+				Optional:            true,
+			}
+			m[name] = a
 		}
-		m[name] = a
 	}
 	return m
 }

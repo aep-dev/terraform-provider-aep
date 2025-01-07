@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
@@ -57,9 +59,13 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 }
 
 func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
-	resources := make([]func() resource.Resource, len(p.generator.api.Resources))
-	for range p.generator.api.Resources {
-		resources = append(resources, NewExampleResource)
+	tflog.Info(ctx, fmt.Sprintf("Inside resources with provider %v", p))
+	tflog.Info(ctx, fmt.Sprintf("Generator value %v", p.generator))
+	tflog.Info(ctx, fmt.Sprintf("API value %v", p.generator.api))
+	resources := []func() resource.Resource{}
+	for name, resource := range p.generator.api.Resources {
+		tflog.Info(ctx, fmt.Sprintf("Resource name %s value %v", name, resource))
+		resources = append(resources, NewExampleResourceWithResource(resource, name))
 	}
 	return resources
 }
