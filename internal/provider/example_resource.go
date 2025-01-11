@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -12,16 +13,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, n string) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
 			resource: r,
+			api:      a,
 			name:     n,
 		}
 	}
@@ -34,6 +37,7 @@ func NewExampleResource() resource.Resource {
 // ExampleResource defines the resource implementation.
 type ExampleResource struct {
 	resource *api.Resource
+	api      *api.API
 	name     string
 
 	// Client will be configured at plan/apply time in the Configure() function.
@@ -109,7 +113,7 @@ func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data map[string]interface{}
+	data := &data.Resource{}
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -118,14 +122,27 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	err := Create(r.resource, r.client, data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
+		return
+	}
+
+	var jsonDataMap map[string]interface{}
+	err = json.Unmarshal(jsonData, &jsonDataMap)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		return
+	}
+
+	err = Create(r.resource, r.client, r.api.ServerURL, jsonDataMap)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create example, got error: %s", err))
 		return
 	}
 
-	a, err := Read(r.resource, r.client, data)
+	a, err := Read(r.resource, r.client, r.api.ServerURL, jsonDataMap)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -136,7 +153,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data map[string]interface{}
+	data := &data.Resource{}
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -145,18 +162,31 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	data, err := Read(r.resource, r.client, data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
+		return
+	}
+
+	var jsonDataMap map[string]interface{}
+	err = json.Unmarshal(jsonData, &jsonDataMap)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		return
+	}
+
+	a, err := Read(r.resource, r.client, r.api.ServerURL, jsonDataMap)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
 	}
 
 	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &a)...)
 }
 
 func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data map[string]interface{}
+	data := &data.Resource{}
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -165,14 +195,27 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err := Update(r.resource, r.client, data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
+		return
+	}
+
+	var jsonDataMap map[string]interface{}
+	err = json.Unmarshal(jsonData, &jsonDataMap)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		return
+	}
+
+	err = Update(r.resource, r.client, r.api.ServerURL, jsonDataMap)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, got error: %s", err))
 		return
 	}
 
-	a, err := Read(r.resource, r.client, data)
+	a, err := Read(r.resource, r.client, r.api.ServerURL, jsonDataMap)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -183,7 +226,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data map[string]interface{}
+	data := &data.Resource{}
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -192,7 +235,20 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	err := Delete(r.resource, r.client, data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
+		return
+	}
+
+	var jsonDataMap map[string]interface{}
+	err = json.Unmarshal(jsonData, &jsonDataMap)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		return
+	}
+
+	err = Delete(r.resource, r.client, r.api.ServerURL, jsonDataMap)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete example, got error: %s", err))
 		return

@@ -10,7 +10,7 @@ import (
 	"github.com/aep-dev/aep-lib-go/pkg/api"
 )
 
-func Create(r *api.Resource, c *http.Client, body map[string]interface{}) error {
+func Create(r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}) error {
 	suffix := ""
 	if r.CreateMethod.SupportsUserSettableCreate {
 		id, ok := body["id"]
@@ -24,7 +24,7 @@ func Create(r *api.Resource, c *http.Client, body map[string]interface{}) error 
 
 		suffix = fmt.Sprintf("?id=", idString)
 	}
-	url, err := createBase(r, body, suffix)
+	url, err := createBase(r, body, serverUrl, suffix)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func Create(r *api.Resource, c *http.Client, body map[string]interface{}) error 
 	return err
 }
 
-func Read(r *api.Resource, c *http.Client, parameters map[string]interface{}) (map[string]interface{}, error) {
+func Read(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) (map[string]interface{}, error) {
 	id, ok := parameters["id"]
 	if !ok {
 		return nil, fmt.Errorf("id field not found in %v", parameters)
@@ -53,7 +53,7 @@ func Read(r *api.Resource, c *http.Client, parameters map[string]interface{}) (m
 		return nil, fmt.Errorf("id field is not string %v", id)
 	}
 
-	url, err := createBase(r, parameters, fmt.Sprintf("/%s", idString))
+	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func Read(r *api.Resource, c *http.Client, parameters map[string]interface{}) (m
 	return data, nil
 }
 
-func Delete(r *api.Resource, c *http.Client, parameters map[string]interface{}) error {
+func Delete(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
 	id, ok := parameters["id"]
 	if !ok {
 		return fmt.Errorf("id field not found in %v", parameters)
@@ -93,7 +93,7 @@ func Delete(r *api.Resource, c *http.Client, parameters map[string]interface{}) 
 		return fmt.Errorf("id field is not string %v", id)
 	}
 
-	url, err := createBase(r, parameters, fmt.Sprintf("/%s", idString))
+	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func Delete(r *api.Resource, c *http.Client, parameters map[string]interface{}) 
 	return err
 }
 
-func Update(r *api.Resource, c *http.Client, parameters map[string]interface{}) error {
+func Update(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
 	id, ok := parameters["id"]
 	if !ok {
 		return fmt.Errorf("id field not found in %v", parameters)
@@ -117,7 +117,7 @@ func Update(r *api.Resource, c *http.Client, parameters map[string]interface{}) 
 		return fmt.Errorf("id field is not string %v", id)
 	}
 
-	url, err := createBase(r, parameters, fmt.Sprintf("/%s", idString))
+	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func Update(r *api.Resource, c *http.Client, parameters map[string]interface{}) 
 	return err
 }
 
-func createBase(r *api.Resource, body map[string]interface{}, suffix string) (string, error) {
+func createBase(r *api.Resource, body map[string]interface{}, serverUrl string, suffix string) (string, error) {
 	pElems := []string{}
 	for i, p := range r.PatternElems {
 		// last element, we assume this was handled by the caller.
@@ -157,5 +157,5 @@ func createBase(r *api.Resource, body map[string]interface{}, suffix string) (st
 			pElems = append(pElems, s)
 		}
 	}
-	return strings.Join(pElems, "/") + suffix, nil
+	return serverUrl + "/" + strings.Join(pElems, "/") + suffix, nil
 }

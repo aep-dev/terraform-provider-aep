@@ -1,3 +1,4 @@
-resource "scaffolding_example" "example" {
-  configurable_attribute = "some-value"
+resource "scaffolding_publisher" "pub1" {
+  path = "pub1"
+  description = "my-publisher"
 }

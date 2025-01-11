@@ -65,7 +65,7 @@ func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.R
 	resources := []func() resource.Resource{}
 	for name, resource := range p.generator.api.Resources {
 		tflog.Info(ctx, fmt.Sprintf("Resource name %s value %v", name, resource))
-		resources = append(resources, NewExampleResourceWithResource(resource, name))
+		resources = append(resources, NewExampleResourceWithResource(resource, p.generator.api, name))
 	}
 	return resources
 }
