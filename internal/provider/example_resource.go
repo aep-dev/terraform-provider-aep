@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -122,16 +121,9 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	jsonData, err := json.Marshal(data)
+	jsonDataMap, err := data.ToJSON()
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
-		return
-	}
-
-	var jsonDataMap map[string]interface{}
-	err = json.Unmarshal(jsonData, &jsonDataMap)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
 		return
 	}
 
@@ -162,16 +154,9 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	jsonData, err := json.Marshal(data)
+	jsonDataMap, err := data.ToJSON()
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
-		return
-	}
-
-	var jsonDataMap map[string]interface{}
-	err = json.Unmarshal(jsonData, &jsonDataMap)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
 		return
 	}
 
@@ -195,16 +180,9 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	jsonData, err := json.Marshal(data)
+	jsonDataMap, err := data.ToJSON()
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
-		return
-	}
-
-	var jsonDataMap map[string]interface{}
-	err = json.Unmarshal(jsonData, &jsonDataMap)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
 		return
 	}
 
@@ -235,16 +213,9 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	jsonData, err := json.Marshal(data)
+	jsonDataMap, err := data.ToJSON()
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to marshal data to JSON", err.Error())
-		return
-	}
-
-	var jsonDataMap map[string]interface{}
-	err = json.Unmarshal(jsonData, &jsonDataMap)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to unmarshal JSON to map", err.Error())
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
 		return
 	}
 

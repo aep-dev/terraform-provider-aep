@@ -13,16 +13,16 @@ import (
 func Create(r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}) error {
 	suffix := ""
 	if r.CreateMethod.SupportsUserSettableCreate {
-		id, ok := body["id"]
+		id, ok := body["path"]
 		if !ok {
-			return fmt.Errorf("id field not found in %v", body)
+			return fmt.Errorf("path field not found in %v", body)
 		}
 		idString, ok := id.(string)
 		if !ok {
-			return fmt.Errorf("id field is not string %v", id)
+			return fmt.Errorf("path field is not string %v", id)
 		}
 
-		suffix = fmt.Sprintf("?id=", idString)
+		suffix = fmt.Sprintf("?id=%s", idString)
 	}
 	url, err := createBase(r, body, serverUrl, suffix)
 	if err != nil {
@@ -44,13 +44,13 @@ func Create(r *api.Resource, c *http.Client, serverUrl string, body map[string]i
 }
 
 func Read(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) (map[string]interface{}, error) {
-	id, ok := parameters["id"]
+	id, ok := parameters["path"]
 	if !ok {
-		return nil, fmt.Errorf("id field not found in %v", parameters)
+		return nil, fmt.Errorf("path field not found in %v", parameters)
 	}
 	idString, ok := id.(string)
 	if !ok {
-		return nil, fmt.Errorf("id field is not string %v", id)
+		return nil, fmt.Errorf("path field is not string %v", id)
 	}
 
 	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
@@ -84,13 +84,13 @@ func Read(r *api.Resource, c *http.Client, serverUrl string, parameters map[stri
 }
 
 func Delete(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["id"]
+	id, ok := parameters["path"]
 	if !ok {
-		return fmt.Errorf("id field not found in %v", parameters)
+		return fmt.Errorf("path field not found in %v", parameters)
 	}
 	idString, ok := id.(string)
 	if !ok {
-		return fmt.Errorf("id field is not string %v", id)
+		return fmt.Errorf("path field is not string %v", id)
 	}
 
 	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
@@ -108,13 +108,13 @@ func Delete(r *api.Resource, c *http.Client, serverUrl string, parameters map[st
 }
 
 func Update(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["id"]
+	id, ok := parameters["path"]
 	if !ok {
-		return fmt.Errorf("id field not found in %v", parameters)
+		return fmt.Errorf("path field not found in %v", parameters)
 	}
 	idString, ok := id.(string)
 	if !ok {
-		return fmt.Errorf("id field is not string %v", id)
+		return fmt.Errorf("path field is not string %v", id)
 	}
 
 	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))

@@ -4,6 +4,7 @@
 package data
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -80,4 +81,34 @@ func (r *Resource) FromTerraform5Value(value tftypes.Value) error {
 	r.Values = *values.Object
 	r.objectType = value.Type().(tftypes.Object)
 	return nil
+}
+
+// The structure of the data is:
+//
+// {"description": {"string": "my-description"}, "path": {"string": "my-path"}}
+//
+// This function removes the object type keys.
+func (r *Resource) ToJSON() (map[string]interface{}, error) {
+	jsonData, err := json.Marshal(r.Values)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonDataMap map[string]interface{}
+	err = json.Unmarshal(jsonData, &jsonDataMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: This is super brittle!
+	for key, value := range jsonDataMap {
+		if valueMap, ok := value.(map[string]interface{}); ok {
+			if stringValue, ok := valueMap["string"]; ok {
+				jsonDataMap[key] = stringValue
+			}
+		}
+	}
+
+	return jsonDataMap, nil
+
 }
