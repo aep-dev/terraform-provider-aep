@@ -1,6 +1,8 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
+// Inspiration: https://github.com/hashicorp/terraform-plugin-framework/issues/1035#issuecomment-2396927170
+
 package data
 
 import (
@@ -41,7 +43,7 @@ type Resource struct {
 //
 // It assumes the ID value exists and is a string type.
 func (r Resource) GetId() string {
-	return *r.Values["id"].String
+	return *r.Values["path"].String
 }
 
 // WithType adds type information into a Resource as this is not stored as part
@@ -110,5 +112,15 @@ func (r *Resource) ToJSON() (map[string]interface{}, error) {
 	}
 
 	return jsonDataMap, nil
+}
 
+// TODO: This is super brittle!
+func ToResource(m map[string]interface{}, r *Resource) error {
+	for k, v := range m {
+		vString, ok := v.(string)
+		if ok {
+			r.Values[k] = Value{String: &vString}
+		}
+	}
+	return nil
 }
