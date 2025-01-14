@@ -1,9 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
+// Inspiration: https://github.com/hashicorp/terraform-plugin-framework/issues/1035#issuecomment-2396927170
+
 package data
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -40,7 +43,7 @@ type Resource struct {
 //
 // It assumes the ID value exists and is a string type.
 func (r Resource) GetId() string {
-	return *r.Values["id"].String
+	return *r.Values["path"].String
 }
 
 // WithType adds type information into a Resource as this is not stored as part
@@ -79,5 +82,45 @@ func (r *Resource) FromTerraform5Value(value tftypes.Value) error {
 	// at the beginning.
 	r.Values = *values.Object
 	r.objectType = value.Type().(tftypes.Object)
+	return nil
+}
+
+// The structure of the data is:
+//
+// {"description": {"string": "my-description"}, "path": {"string": "my-path"}}
+//
+// This function removes the object type keys.
+func (r *Resource) ToJSON() (map[string]interface{}, error) {
+	jsonData, err := json.Marshal(r.Values)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonDataMap map[string]interface{}
+	err = json.Unmarshal(jsonData, &jsonDataMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: This is super brittle!
+	for key, value := range jsonDataMap {
+		if valueMap, ok := value.(map[string]interface{}); ok {
+			if stringValue, ok := valueMap["string"]; ok {
+				jsonDataMap[key] = stringValue
+			}
+		}
+	}
+
+	return jsonDataMap, nil
+}
+
+// TODO: This is super brittle!
+func ToResource(m map[string]interface{}, r *Resource) error {
+	for k, v := range m {
+		vString, ok := v.(string)
+		if ok {
+			r.Values[k] = Value{String: &vString}
+		}
+	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,52 +9,67 @@ import (
 	"strings"
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func Create(r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}) error {
+func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}) (map[string]interface{}, error) {
 	suffix := ""
 	if r.CreateMethod.SupportsUserSettableCreate {
 		id, ok := body["id"]
 		if !ok {
-			return fmt.Errorf("id field not found in %v", body)
+			return nil, fmt.Errorf("id field not found in %v", body)
 		}
 		idString, ok := id.(string)
 		if !ok {
-			return fmt.Errorf("id field is not string %v", id)
+			return nil, fmt.Errorf("id field is not string %v", id)
 		}
 
-		suffix = fmt.Sprintf("?id=", idString)
+		suffix = fmt.Sprintf("?id=%s", idString)
 	}
-	url, err := createBase(r, body, serverUrl, suffix)
+	url, err := createBase(ctx, r, body, serverUrl, suffix)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		return fmt.Errorf("error marshalling JSON: %v", err)
+		return nil, fmt.Errorf("error marshalling JSON: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonBody)))
 	if err != nil {
-		return fmt.Errorf("error creating post request: %v", err)
+		return nil, fmt.Errorf("error creating post request: %v", err)
 	}
 
-	_, err = c.Do(req)
-	return err
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %v", err)
+	}
+	tflog.Info(ctx, fmt.Sprintf("Response body: %q", string(respBody)))
+	var data map[string]interface{}
+	err = json.Unmarshal(respBody, &data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
-func Read(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) (map[string]interface{}, error) {
-	id, ok := parameters["id"]
+func Read(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) (map[string]interface{}, error) {
+	id, ok := parameters["path"]
 	if !ok {
-		return nil, fmt.Errorf("id field not found in %v", parameters)
+		return nil, fmt.Errorf("path field not found in %v", parameters)
 	}
 	idString, ok := id.(string)
 	if !ok {
-		return nil, fmt.Errorf("id field is not string %v", id)
+		return nil, fmt.Errorf("path field is not string %v", id)
 	}
 
-	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
+	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
 	if err != nil {
 		return nil, err
 	}
@@ -83,17 +99,17 @@ func Read(r *api.Resource, c *http.Client, serverUrl string, parameters map[stri
 	return data, nil
 }
 
-func Delete(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["id"]
+func Delete(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
+	id, ok := parameters["path"]
 	if !ok {
-		return fmt.Errorf("id field not found in %v", parameters)
+		return fmt.Errorf("path field not found in %v", parameters)
 	}
 	idString, ok := id.(string)
 	if !ok {
-		return fmt.Errorf("id field is not string %v", id)
+		return fmt.Errorf("path field is not string %v", id)
 	}
 
-	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
+	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
 	if err != nil {
 		return err
 	}
@@ -107,17 +123,17 @@ func Delete(r *api.Resource, c *http.Client, serverUrl string, parameters map[st
 	return err
 }
 
-func Update(r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["id"]
+func Update(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
+	id, ok := parameters["path"]
 	if !ok {
-		return fmt.Errorf("id field not found in %v", parameters)
+		return fmt.Errorf("path field not found in %v", parameters)
 	}
 	idString, ok := id.(string)
 	if !ok {
-		return fmt.Errorf("id field is not string %v", id)
+		return fmt.Errorf("path field is not string %v", id)
 	}
 
-	url, err := createBase(r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
+	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
 	if err != nil {
 		return err
 	}
@@ -136,26 +152,6 @@ func Update(r *api.Resource, c *http.Client, serverUrl string, parameters map[st
 	return err
 }
 
-func createBase(r *api.Resource, body map[string]interface{}, serverUrl string, suffix string) (string, error) {
-	pElems := []string{}
-	for i, p := range r.PatternElems {
-		// last element, we assume this was handled by the caller.
-		if i == len(r.PatternElems)-1 {
-			continue
-		}
-		if i%2 == 0 {
-			pElems = append(pElems, p)
-		} else {
-			v, ok := body[p]
-			if !ok {
-				return "", fmt.Errorf("%s not found in resource", p)
-			}
-			s, ok := v.(string)
-			if !ok {
-				return "", fmt.Errorf("%s value %v cannot be converted to string", p, v)
-			}
-			pElems = append(pElems, s)
-		}
-	}
-	return serverUrl + "/" + strings.Join(pElems, "/") + suffix, nil
+func createBase(ctx context.Context, r *api.Resource, body map[string]interface{}, serverUrl string, suffix string) (string, error) {
+	return serverUrl + "/" + r.Plural + suffix, nil
 }
