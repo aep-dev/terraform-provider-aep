@@ -58,41 +58,52 @@ func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest
 	}
 }
 
+func checkIfRequired(requiredProps []string, propName string) bool {
+	for _, prop := range requiredProps {
+		if prop == propName {
+			return true
+		}
+		return false
+	}
+
+}
+
 func (r *ExampleResource) schemaAttributes() map[string]schema.Attribute {
 	m := make(map[string]schema.Attribute)
 	for name, prop := range r.resource.Schema.Properties {
+		required := checkIfRequired(r.resource.Schema.Required, name)
 		var a schema.Attribute
 		switch prop.Type {
 		case "number":
 			a = schema.NumberAttribute{
-				MarkdownDescription: "",
+				MarkdownDescription: prop.Description,
 				Computed:            prop.ReadOnly,
-				Required:            false,
-				Optional:            true,
+				Required:            required,
+				Optional:            !required,
 			}
 			m[name] = a
 		case "string":
 			a = schema.StringAttribute{
-				MarkdownDescription: "",
+				MarkdownDescription: prop.Description,
 				Computed:            prop.ReadOnly,
-				Required:            false,
-				Optional:            true,
+				Optional:            !required,
+				Required:            required,
 			}
 			m[name] = a
 		case "boolean":
 			a = schema.BoolAttribute{
-				MarkdownDescription: "",
+				MarkdownDescription: prop.Description,
 				Computed:            prop.ReadOnly,
-				Required:            false,
-				Optional:            true,
+				Required:            required,
+				Optional:            !required,
 			}
 			m[name] = a
 		case "integer":
 			a = schema.Int64Attribute{
-				MarkdownDescription: "",
+				MarkdownDescription: prop.Description,
 				Computed:            prop.ReadOnly,
-				Required:            false,
-				Optional:            true,
+				Required:            required,
+				Optional:            !required,
 			}
 			m[name] = a
 		}
