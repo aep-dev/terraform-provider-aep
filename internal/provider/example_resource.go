@@ -63,9 +63,8 @@ func checkIfRequired(requiredProps []string, propName string) bool {
 		if prop == propName {
 			return true
 		}
-		return false
 	}
-
+  return false
 }
 
 func (r *ExampleResource) schemaAttributes() map[string]schema.Attribute {
