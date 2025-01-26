@@ -49,12 +49,17 @@ func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	attr, err := SchemaAttributes(*r.resource.Schema)
+	if err != nil {
+		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create schema for resource %s, got error: %s", r.name, err))
+		return
+	}
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		// TODO: Add description.
 		MarkdownDescription: r.resource.Singular,
 
-		Attributes: r.schemaAttributes(),
+		Attributes: attr,
 	}
 }
 
@@ -64,54 +69,7 @@ func checkIfRequired(requiredProps []string, propName string) bool {
 			return true
 		}
 	}
-  return false
-}
-
-func (r *ExampleResource) schemaAttributes() map[string]schema.Attribute {
-	m := make(map[string]schema.Attribute)
-	for name, prop := range r.resource.Schema.Properties {
-		required := checkIfRequired(r.resource.Schema.Required, name)
-		var a schema.Attribute
-		switch prop.Type {
-		case "number":
-			a = schema.NumberAttribute{
-				MarkdownDescription: prop.Description,
-				Computed:            prop.ReadOnly,
-				Required:            required,
-				Optional:            !required,
-			}
-			m[name] = a
-		case "string":
-			a = schema.StringAttribute{
-				MarkdownDescription: prop.Description,
-				Computed:            prop.ReadOnly,
-				Optional:            !required,
-				Required:            required,
-			}
-			m[name] = a
-		case "boolean":
-			a = schema.BoolAttribute{
-				MarkdownDescription: prop.Description,
-				Computed:            prop.ReadOnly,
-				Required:            required,
-				Optional:            !required,
-			}
-			m[name] = a
-		case "integer":
-			a = schema.Int64Attribute{
-				MarkdownDescription: prop.Description,
-				Computed:            prop.ReadOnly,
-				Required:            required,
-				Optional:            !required,
-			}
-			m[name] = a
-		}
-	}
-	m["id"] = schema.StringAttribute{
-		MarkdownDescription: "The id of the resource",
-		Required:            true,
-	}
-	return m
+	return false
 }
 
 func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
