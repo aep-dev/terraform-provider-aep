@@ -6,6 +6,7 @@ package data
 import (
 	"encoding/json"
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -157,4 +158,49 @@ func checkSymmetry(t *testing.T, resource Resource) {
 	}
 
 	checkResourceEqual(t, resource, actual)
+}
+
+func TestToJSON(t *testing.T) {
+	testCases := []struct {
+		name     string
+		resource Resource
+		expected map[string]interface{}
+	}{
+		{
+			name: "simple",
+			resource: Resource{
+				Values: map[string]Value{
+					"foo": {String: String("bar")},
+				},
+			},
+			expected: map[string]interface{}{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "complex",
+			resource: Resource{
+				Values: map[string]Value{
+					"foo": {String: String("bar")},
+					"baz": {Number: BigFloat(big.NewFloat(123))},
+				},
+			},
+			expected: map[string]interface{}{
+				"foo": "bar",
+				"baz": "123",
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual, err := testCase.resource.ToJSON()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(testCase.expected, actual) {
+				t.Fatalf("expected did not match actual\nexpected:\n%v\nactual:\n%v", testCase.expected, actual)
+			}
+		})
+	}
 }

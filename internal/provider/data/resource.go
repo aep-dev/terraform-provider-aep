@@ -6,8 +6,9 @@
 package data
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
+	"math/big"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
@@ -91,36 +92,100 @@ func (r *Resource) FromTerraform5Value(value tftypes.Value) error {
 //
 // This function removes the object type keys.
 func (r *Resource) ToJSON() (map[string]interface{}, error) {
-	jsonData, err := json.Marshal(r.Values)
-	if err != nil {
-		return nil, err
-	}
-
-	var jsonDataMap map[string]interface{}
-	err = json.Unmarshal(jsonData, &jsonDataMap)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: This is super brittle!
-	for key, value := range jsonDataMap {
-		if valueMap, ok := value.(map[string]interface{}); ok {
-			if stringValue, ok := valueMap["string"]; ok {
-				jsonDataMap[key] = stringValue
-			}
+	jsonMap := make(map[string]interface{})
+	for k, v := range r.Values {
+		convertedValue, err := ConvertValue(v)
+		if err != nil {
+			return nil, err
 		}
+		jsonMap[k] = convertedValue
 	}
-
-	return jsonDataMap, nil
+	return jsonMap, nil
 }
 
-// TODO: This is super brittle!
+func ConvertValue(v Value) (interface{}, error) {
+	if v.Boolean != nil {
+		return *v.Boolean, nil
+	}
+	if v.Number != nil {
+		return v.Number.String(), nil
+	}
+	if v.String != nil {
+		return *v.String, nil
+	}
+	if v.List != nil {
+		list := make([]interface{}, len(*v.List))
+		for i, item := range *v.List {
+			list[i] = item
+		}
+		return list, nil
+	}
+	if v.Map != nil {
+		mapJSON := make(map[string]interface{})
+		for key, value := range *v.Map {
+			convertedValue, err := ConvertValue(value)
+			if err != nil {
+				return nil, err
+			}
+			mapJSON[key] = convertedValue
+		}
+		return mapJSON, nil
+	}
+	if v.Object != nil {
+		objectJSON := make(map[string]interface{})
+		for key, value := range *v.Object {
+			convertedValue, err := ConvertValue(value)
+			if err != nil {
+				return nil, err
+			}
+			objectJSON[key] = convertedValue
+		}
+		return objectJSON, nil
+	}
+	if v.Set != nil {
+		set := make([]interface{}, len(*v.Set))
+		for i, item := range *v.Set {
+			convertedValue, err := ConvertValue(item)
+			if err != nil {
+				return nil, err
+			}
+			set[i] = convertedValue
+		}
+		return set, nil
+	}
+	return nil, fmt.Errorf("unknown type %v", v)
+}
+
 func ToResource(m map[string]interface{}, r *Resource) error {
 	for k, v := range m {
-		vString, ok := v.(string)
-		if ok {
-			r.Values[k] = Value{String: &vString}
-		}
+		r.Values[k] = ConvertTypeToValue(v)
 	}
 	return nil
+}
+
+func ConvertTypeToValue(v interface{}) Value {
+	switch v := v.(type) {
+	case string:
+		return Value{String: &v}
+	case bool:
+		return Value{Boolean: &v}
+	case int:
+		return Value{Number: big.NewFloat(float64(v))}
+	case float64:
+		return Value{Number: big.NewFloat(v)}
+	case []interface{}:
+		list := make([]Value, len(v))
+		for i, item := range v {
+			list[i] = ConvertTypeToValue(item)
+		}
+		return Value{List: &list}
+	case map[string]interface{}:
+		mapJSON := make(map[string]Value)
+		for key, value := range v {
+			mapJSON[key] = ConvertTypeToValue(value)
+		}
+		return Value{Object: &mapJSON}
+	default:
+		return Value{}
+	}
 }
