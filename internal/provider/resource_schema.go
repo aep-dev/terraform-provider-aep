@@ -2,6 +2,8 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -16,13 +18,24 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 		if err != nil {
 			return nil, err
 		}
-		m[name] = a
+		m[ToSnakeCase(name)] = a
 	}
 	m["id"] = tfschema.StringAttribute{
 		MarkdownDescription: "The id of the resource",
-		Required:            true,
+		Required:            false,
+		Optional:            true,
+		Computed:            true,
 	}
 	return m, nil
+}
+
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func ToSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }
 
 func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (tfschema.Attribute, error) {
