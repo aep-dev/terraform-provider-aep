@@ -145,7 +145,18 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	a, err := Read(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	pathInterface, ok := jsonDataMap["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to find path"))
+		return
+	}
+	path, ok := pathInterface.(string)
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to convert path to string"))
+		return
+	}
+
+	a, err := Read(ctx, r.client, r.api.ServerURL, path)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -165,9 +176,11 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	dataResource := &data.Resource{}
+	dataState := &data.Resource{}
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataResource)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &dataState)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -179,14 +192,25 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err = Update(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	s, ok := dataState.Values["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state"))
+		return
+	}
+	if s.String == nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state - pointer empty"))
+		return
+
+	}
+
+	err = Update(ctx, r.client, r.api.ServerURL, *s.String, jsonDataMap)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, got error: %s", err))
 		return
 	}
 
-	a, err := Read(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	a, err := Read(ctx, r.client, r.api.ServerURL, *s.String)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -215,13 +239,18 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	jsonDataMap, err := dataResource.ToJSON()
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
+	s, ok := dataResource.Values["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state"))
 		return
 	}
+	if s.String == nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state - pointer empty"))
+		return
 
-	err = Delete(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	}
+
+	err := Delete(ctx, r.client, r.api.ServerURL, *s.String)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete example, got error: %s", err))
 		return
@@ -229,5 +258,5 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func (r *ExampleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root("path"), req, resp)
 }

@@ -20,12 +20,6 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 		}
 		m[ToSnakeCase(name)] = a
 	}
-	m["id"] = tfschema.StringAttribute{
-		MarkdownDescription: "The id of the resource",
-		Required:            false,
-		Optional:            true,
-		Computed:            true,
-	}
 	return m, nil
 }
 

@@ -59,20 +59,8 @@ func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 	return data, nil
 }
 
-func Read(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) (map[string]interface{}, error) {
-	id, ok := parameters["path"]
-	if !ok {
-		return nil, fmt.Errorf("path field not found in %v", parameters)
-	}
-	idString, ok := id.(string)
-	if !ok {
-		return nil, fmt.Errorf("path field is not string %v", id)
-	}
-
-	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
-	if err != nil {
-		return nil, err
-	}
+func Read(ctx context.Context, c *http.Client, serverUrl string, path string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%s/%s", serverUrl, path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -99,20 +87,8 @@ func Read(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string
 	return data, nil
 }
 
-func Delete(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["path"]
-	if !ok {
-		return fmt.Errorf("path field not found in %v", parameters)
-	}
-	idString, ok := id.(string)
-	if !ok {
-		return fmt.Errorf("path field is not string %v", id)
-	}
-
-	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
-	if err != nil {
-		return err
-	}
+func Delete(ctx context.Context, c *http.Client, serverUrl string, path string) error {
+	url := fmt.Sprintf("%s/%s", serverUrl, path)
 
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
@@ -123,22 +99,10 @@ func Delete(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 	return err
 }
 
-func Update(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["path"]
-	if !ok {
-		return fmt.Errorf("path field not found in %v", parameters)
-	}
-	idString, ok := id.(string)
-	if !ok {
-		return fmt.Errorf("path field is not string %v", id)
-	}
+func Update(ctx context.Context, c *http.Client, serverUrl string, path string, body map[string]interface{}) error {
+	url := fmt.Sprintf("%s/%s", serverUrl, path)
 
-	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
-	if err != nil {
-		return err
-	}
-
-	reqBody, err := json.Marshal(parameters)
+	reqBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("error marshalling JSON for request body: %v", err)
 	}
