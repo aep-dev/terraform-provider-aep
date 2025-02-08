@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
+	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -20,12 +21,13 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
 			resource: r,
 			api:      a,
 			name:     n,
+			openapi:  o,
 		}
 	}
 }
@@ -39,6 +41,7 @@ type ExampleResource struct {
 	resource *api.Resource
 	api      *api.API
 	name     string
+	openapi  *openapi.OpenAPI
 
 	// Client will be configured at plan/apply time in the Configure() function.
 	client *http.Client
@@ -54,6 +57,17 @@ func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest
 		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create schema for resource %s, got error: %s", r.name, err))
 		return
 	}
+
+	para, err := ParameterAttributes(r.resource, r.openapi)
+	if err != nil {
+		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create additional attributes for resource %s, got error: %s", r.name, err))
+		return
+	}
+
+	for name, p := range para {
+		attr[name] = p
+	}
+
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		// TODO: Add description.
@@ -123,7 +137,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v"))
+	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
@@ -168,7 +182,7 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v"))
+	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
@@ -223,7 +237,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v"))
+	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)

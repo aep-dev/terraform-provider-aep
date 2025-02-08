@@ -6,6 +6,7 @@ package provider
 import (
 	"testing"
 
+	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
@@ -20,7 +21,11 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 		if err != nil {
 			return nil, err
 		}
-		return providerserver.NewProtocol6WithError(New("test", gen)())()
+		oas, err := openapi.FetchOpenAPI("testdata/oas.yaml")
+		if err != nil {
+			return nil, err
+		}
+		return providerserver.NewProtocol6WithError(New("test", gen, oas)())()
 	},
 }
 

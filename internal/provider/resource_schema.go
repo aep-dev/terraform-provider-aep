@@ -5,9 +5,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	tfschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -19,6 +22,37 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 			return nil, err
 		}
 		m[ToSnakeCase(name)] = a
+	}
+	return m, nil
+}
+
+// Attributes coming from parents.
+func ParameterAttributes(r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+	if len(r.PatternElems) < 1 {
+		return nil, fmt.Errorf("must have at least one parent pattern")
+	}
+	// Fetch pattern + remove the last part.
+	p := fmt.Sprintf("/%s", r.Schema.XAEPResource.Patterns[0])
+	parts := strings.Split(p, "/")
+	parts = parts[:len(parts)-1]
+	p = strings.Join(parts, "/")
+
+	// Fetch create method.
+	para, ok := o.Paths[p]
+	if !ok {
+		return nil, fmt.Errorf("could not find %s in paths", p)
+	}
+	m := make(map[string]tfschema.Attribute)
+	if para != nil && para.Post != nil {
+		for _, prop := range para.Post.Parameters {
+			m[prop.Name] = tfschema.StringAttribute{
+				MarkdownDescription: prop.Description,
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			}
+		}
 	}
 	return m, nil
 }

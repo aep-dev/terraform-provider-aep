@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -27,6 +28,8 @@ type ScaffoldingProvider struct {
 
 	// generator is set to the information created from the OpenAPI spec.
 	generator *GeneratedProviderData
+
+	openapi *openapi.OpenAPI
 }
 
 // ScaffoldingProviderModel describes the provider data model.
@@ -59,7 +62,7 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{}
 	for name, resource := range p.generator.api.Resources {
-		resources = append(resources, NewExampleResourceWithResource(resource, p.generator.api, name))
+		resources = append(resources, NewExampleResourceWithResource(resource, p.generator.api, name, p.openapi))
 	}
 	return resources
 }
@@ -72,11 +75,12 @@ func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.F
 	return []func() function.Function{}
 }
 
-func New(version string, g *GeneratedProviderData) func() provider.Provider {
+func New(version string, g *GeneratedProviderData, oas *openapi.OpenAPI) func() provider.Provider {
 	return func() provider.Provider {
 		return &ScaffoldingProvider{
 			version:   version,
 			generator: g,
+			openapi:   oas,
 		}
 	}
 }

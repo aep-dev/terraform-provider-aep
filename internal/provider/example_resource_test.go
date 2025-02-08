@@ -12,6 +12,7 @@ import (
 
 func TestAccExampleResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
