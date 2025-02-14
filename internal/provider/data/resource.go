@@ -116,7 +116,11 @@ func ConvertValue(v Value) (interface{}, error) {
 	if v.List != nil {
 		list := make([]interface{}, len(*v.List))
 		for i, item := range *v.List {
-			list[i] = item
+			c, err := ConvertValue(item)
+			if err != nil {
+				return nil, err
+			}
+			list[i] = c
 		}
 		return list, nil
 	}
