@@ -5,11 +5,34 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	tfschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// The full schema - includes all fields from body + parameters for parents.
+func FullSchema(r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+	attributes, err := SchemaAttributes(*r.Schema)
+	if err != nil {
+		return nil, err
+	}
+
+	parameterAttributes, err := ParameterAttributes(r, o)
+	if err != nil {
+		return nil, err
+	}
+
+	for name, attribute := range parameterAttributes {
+		attributes[name] = attribute
+	}
+
+	return attributes, nil
+
+}
 
 func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, error) {
 	m := make(map[string]tfschema.Attribute)
@@ -21,10 +44,27 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 		m[ToSnakeCase(name)] = a
 	}
 	m["id"] = tfschema.StringAttribute{
-		MarkdownDescription: "The id of the resource",
-		Required:            false,
-		Optional:            true,
-		Computed:            true,
+		Computed: true,
+	}
+	return m, nil
+}
+
+// Attributes coming from parents.
+func ParameterAttributes(r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+	m := make(map[string]tfschema.Attribute)
+
+	// Do not go through last element, since that's the resource itself.
+	for _, elem := range r.PatternElems[:len(r.PatternElems)-1] {
+		if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
+			paramName := strings.Replace(elem[1:len(elem)-1], "-", "_", -1)
+			m[paramName] = tfschema.StringAttribute{
+				MarkdownDescription: paramName,
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			}
+		}
 	}
 	return m, nil
 }
@@ -129,4 +169,13 @@ func listType(prop openapi.Schema) (attr.Type, error) {
 		return nil, fmt.Errorf("cannot find type for %s", prop.Items.Type)
 	}
 
+}
+
+func checkIfRequired(requiredProps []string, propName string) bool {
+	for _, prop := range requiredProps {
+		if prop == propName {
+			return true
+		}
+	}
+	return false
 }

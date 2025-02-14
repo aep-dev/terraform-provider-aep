@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	tfschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -21,6 +22,10 @@ func TestSchemaAttributes(t *testing.T) {
 						Type:        "string",
 						Description: "foo description",
 					},
+					"id": {
+						Type:        "string",
+						Description: "The id of the resource",
+					},
 				},
 			},
 			want: map[string]tfschema.Attribute{
@@ -30,7 +35,7 @@ func TestSchemaAttributes(t *testing.T) {
 				},
 				"id": tfschema.StringAttribute{
 					MarkdownDescription: "The id of the resource",
-					Required:            true,
+					Optional:            true,
 				},
 			},
 		},
@@ -49,10 +54,6 @@ func TestSchemaAttributes(t *testing.T) {
 					MarkdownDescription: "foo description",
 					Required:            true,
 				},
-				"id": tfschema.StringAttribute{
-					MarkdownDescription: "The id of the resource",
-					Required:            true,
-				},
 			},
 		},
 		"nested": {
@@ -66,6 +67,7 @@ func TestSchemaAttributes(t *testing.T) {
 								Description: "bar description",
 							},
 						},
+						Required: []string{"bar"},
 					},
 				},
 			},
@@ -74,15 +76,12 @@ func TestSchemaAttributes(t *testing.T) {
 					Attributes: map[string]tfschema.Attribute{
 						"bar": tfschema.StringAttribute{
 							MarkdownDescription: "bar description",
-							Optional:            true,
+							Required:            true,
+							Optional:            false,
 						},
 					},
 					MarkdownDescription: "",
 					Optional:            true,
-				},
-				"id": tfschema.StringAttribute{
-					MarkdownDescription: "The id of the resource",
-					Required:            true,
 				},
 			},
 		},
@@ -103,10 +102,6 @@ func TestSchemaAttributes(t *testing.T) {
 					MarkdownDescription: "",
 					Optional:            true,
 				},
-				"id": tfschema.StringAttribute{
-					MarkdownDescription: "The id of the resource",
-					Required:            true,
-				},
 			},
 		},
 	}
@@ -118,8 +113,8 @@ func TestSchemaAttributes(t *testing.T) {
 				t.Errorf("SchemaAttributes() error = %v", err)
 				return
 			}
-			if !attr.AttributesEqual(got, tt.want) {
-				t.Errorf("SchemaAttributes() got = %v, want %v", got, tt.want)
+			if d := cmp.Diff(got, tt.want); d != "" {
+				t.Errorf("SchemaAttributes() diff: %s", d)
 			}
 		})
 	}
@@ -170,8 +165,8 @@ func TestSchemaAttribute(t *testing.T) {
 				t.Errorf("schemaAttribute() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !attr.AttributesEqual(got, tt.want) {
-				t.Errorf("schemaAttribute() got = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("schemaAttribute() mismatch (-got +want):\n%s", diff)
 			}
 		})
 	}
@@ -208,8 +203,8 @@ func TestListType(t *testing.T) {
 				t.Errorf("listType() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !attr.TypesEqual(got, tt.want) {
-				t.Errorf("listType() got = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("listType() mismatch (-got +want):\n%s", diff)
 			}
 		})
 	}

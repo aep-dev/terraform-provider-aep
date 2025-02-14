@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}) (map[string]interface{}, error) {
+func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}, parameters map[string]string) (map[string]interface{}, error) {
 	suffix := ""
-	if r.CreateMethod.SupportsUserSettableCreate {
+	if r.CreateMethod != nil && r.CreateMethod.SupportsUserSettableCreate {
 		id, ok := body["id"]
 		if !ok {
 			return nil, fmt.Errorf("id field not found in %v", body)
@@ -26,10 +26,8 @@ func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 
 		suffix = fmt.Sprintf("?id=%s", idString)
 	}
-	url, err := createBase(ctx, r, body, serverUrl, suffix)
-	if err != nil {
-		return nil, err
-	}
+	url := createBase(ctx, r, serverUrl, parameters, suffix)
+	tflog.Info(ctx, fmt.Sprintf("create url %s", url))
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
@@ -59,20 +57,8 @@ func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 	return data, nil
 }
 
-func Read(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) (map[string]interface{}, error) {
-	id, ok := parameters["path"]
-	if !ok {
-		return nil, fmt.Errorf("path field not found in %v", parameters)
-	}
-	idString, ok := id.(string)
-	if !ok {
-		return nil, fmt.Errorf("path field is not string %v", id)
-	}
-
-	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
-	if err != nil {
-		return nil, err
-	}
+func Read(ctx context.Context, c *http.Client, serverUrl string, path string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%s/%s", serverUrl, path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -99,20 +85,8 @@ func Read(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string
 	return data, nil
 }
 
-func Delete(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["path"]
-	if !ok {
-		return fmt.Errorf("path field not found in %v", parameters)
-	}
-	idString, ok := id.(string)
-	if !ok {
-		return fmt.Errorf("path field is not string %v", id)
-	}
-
-	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
-	if err != nil {
-		return err
-	}
+func Delete(ctx context.Context, c *http.Client, serverUrl string, path string) error {
+	url := fmt.Sprintf("%s/%s", serverUrl, path)
 
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
@@ -123,22 +97,10 @@ func Delete(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 	return err
 }
 
-func Update(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, parameters map[string]interface{}) error {
-	id, ok := parameters["path"]
-	if !ok {
-		return fmt.Errorf("path field not found in %v", parameters)
-	}
-	idString, ok := id.(string)
-	if !ok {
-		return fmt.Errorf("path field is not string %v", id)
-	}
+func Update(ctx context.Context, c *http.Client, serverUrl string, path string, body map[string]interface{}) error {
+	url := fmt.Sprintf("%s/%s", serverUrl, path)
 
-	url, err := createBase(ctx, r, parameters, serverUrl, fmt.Sprintf("/%s", idString))
-	if err != nil {
-		return err
-	}
-
-	reqBody, err := json.Marshal(parameters)
+	reqBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("error marshalling JSON for request body: %v", err)
 	}
@@ -152,6 +114,35 @@ func Update(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 	return err
 }
 
-func createBase(ctx context.Context, r *api.Resource, body map[string]interface{}, serverUrl string, suffix string) (string, error) {
-	return serverUrl + "/" + r.Plural + suffix, nil
+func createBase(ctx context.Context, r *api.Resource, serverUrl string, parameters map[string]string, suffix string) string {
+	urlElems := []string{serverUrl}
+	tflog.Info(ctx, fmt.Sprintf("full pattern %s", r.Schema.XAEPResource.Patterns[0]))
+	patternElements := strings.Split(r.Schema.XAEPResource.Patterns[0], "/")
+	for i, elem := range patternElements {
+		tflog.Info(ctx, fmt.Sprintf("pattern elem %s", elem))
+		if i == len(patternElements)-1 {
+			tflog.Info(ctx, "skipping")
+			continue
+		}
+
+		if i%2 == 0 {
+			tflog.Info(ctx, fmt.Sprintf("adding elem %s", elem))
+			urlElems = append(urlElems, elem)
+		} else {
+			paramName := elem[1 : len(elem)-1]
+			tflog.Info(ctx, fmt.Sprintf("pattern name %s", paramName))
+			tflog.Info(ctx, fmt.Sprintf("parameters %q", parameters))
+			if value, ok := parameters[paramName]; ok {
+				if strings.Contains(value, "/") {
+					value = strings.Split(value, "/")[len(strings.Split(value, "/"))-1]
+				}
+				urlElems = append(urlElems, value)
+			}
+		}
+	}
+	if suffix != "" {
+		urlElems = append(urlElems, suffix)
+	}
+	tflog.Info(ctx, fmt.Sprintf("url elems %q", urlElems))
+	return strings.Join(urlElems, "/")
 }

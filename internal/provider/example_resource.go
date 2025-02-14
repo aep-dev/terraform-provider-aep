@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
+	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -20,12 +21,13 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
 			resource: r,
 			api:      a,
 			name:     n,
+			openapi:  o,
 		}
 	}
 }
@@ -39,6 +41,7 @@ type ExampleResource struct {
 	resource *api.Resource
 	api      *api.API
 	name     string
+	openapi  *openapi.OpenAPI
 
 	// Client will be configured at plan/apply time in the Configure() function.
 	client *http.Client
@@ -49,11 +52,12 @@ func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	attr, err := SchemaAttributes(*r.resource.Schema)
+	attr, err := FullSchema(r.resource, r.openapi)
 	if err != nil {
-		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create schema for resource %s, got error: %s", r.name, err))
+		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create additional attributes for resource %s, got error: %s", r.name, err))
 		return
 	}
+
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		// TODO: Add description.
@@ -61,15 +65,6 @@ func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest
 
 		Attributes: attr,
 	}
-}
-
-func checkIfRequired(requiredProps []string, propName string) bool {
-	for _, prop := range requiredProps {
-		if prop == propName {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -93,22 +88,28 @@ func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	dataResource := &data.Resource{}
+	dataPlan := &data.Resource{}
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataResource)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataPlan)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	jsonDataMap, err := dataResource.ToJSON()
+	parameters, err := Parameters(ctx, dataPlan, r.resource, r.openapi)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create parameters, got error: %s", err))
 		return
 	}
 
-	a, err := Create(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	body, err := Body(dataPlan, r.resource)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create body, got error: %s", err))
+		return
+	}
+
+	a, err := Create(ctx, r.resource, r.client, r.api.ServerURL, body, parameters)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create example, got error: %s", err))
@@ -117,16 +118,16 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 
 	tflog.Info(ctx, fmt.Sprintf("resource state: %v", a))
 
-	err = data.ToResource(a, dataResource)
+	err = data.ToResource(a, dataPlan)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal example, got error: %s", err))
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v"))
+	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataPlan))
 
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, dataPlan)...)
 }
 
 func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -145,7 +146,18 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	a, err := Read(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	pathInterface, ok := jsonDataMap["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to find path"))
+		return
+	}
+	path, ok := pathInterface.(string)
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to convert path to string"))
+		return
+	}
+
+	a, err := Read(ctx, r.client, r.api.ServerURL, path)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -157,7 +169,7 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v"))
+	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
@@ -165,28 +177,41 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	dataResource := &data.Resource{}
+	dataState := &data.Resource{}
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataResource)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &dataState)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	jsonDataMap, err := dataResource.ToJSON()
+	body, err := Body(dataResource, r.resource)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to body, got error: %s", err))
 		return
 	}
 
-	err = Update(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	s, ok := dataState.Values["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state"))
+		return
+	}
+	if s.String == nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state - pointer empty"))
+		return
+
+	}
+
+	err = Update(ctx, r.client, r.api.ServerURL, *s.String, body)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, got error: %s", err))
 		return
 	}
 
-	a, err := Read(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	a, err := Read(ctx, r.client, r.api.ServerURL, *s.String)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -199,7 +224,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v"))
+	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
@@ -215,13 +240,18 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	jsonDataMap, err := dataResource.ToJSON()
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
+	s, ok := dataResource.Values["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state"))
 		return
 	}
+	if s.String == nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state - pointer empty"))
+		return
 
-	err = Delete(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	}
+
+	err := Delete(ctx, r.client, r.api.ServerURL, *s.String)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete example, got error: %s", err))
 		return
@@ -229,5 +259,5 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func (r *ExampleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root("path"), req, resp)
 }
