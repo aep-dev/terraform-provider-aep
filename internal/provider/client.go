@@ -117,15 +117,15 @@ func createBase(ctx context.Context, r *api.Resource, serverUrl string, paramete
 
 func checkErrors(ctx context.Context, body map[string]interface{}) error {
 	if body != nil {
-		if error, ok := body["error"]; ok {
-			tflog.Error(ctx, fmt.Sprintf("API returned error: %v", error))
-			return fmt.Errorf("API returned error: %v", error)
+		if errorMsg, ok := body["error"]; ok {
+			tflog.Error(ctx, fmt.Sprintf("API returned error: %v", errorMsg))
+			return fmt.Errorf("API returned error: %v", errorMsg)
 		}
 
 		// Protobuf error messages may be returned in this format.
-		if code, ok := body["code"]; ok {
-			tflog.Error(ctx, fmt.Sprintf("API returned code: %v", code))
-			return fmt.Errorf("API returned code: %v", code)
+		if _, ok := body["code"]; ok {
+			tflog.Error(ctx, fmt.Sprintf("API returned error: %v", body))
+			return fmt.Errorf("API returned error: %v", body)
 		}
 	}
 	return nil
