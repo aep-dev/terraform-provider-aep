@@ -97,7 +97,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	parameters, err := Parameters(dataPlan, r.resource, r.openapi)
+	parameters, err := Parameters(ctx, dataPlan, r.resource, r.openapi)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create parameters, got error: %s", err))
 		return

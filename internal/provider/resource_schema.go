@@ -51,13 +51,12 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 
 // Attributes coming from parents.
 func ParameterAttributes(r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
-	if len(r.PatternElems) < 1 {
-		return nil, fmt.Errorf("must have at least one parent pattern")
-	}
 	m := make(map[string]tfschema.Attribute)
-	for _, elem := range r.PatternElems {
+
+	// Do not go through last element, since that's the resource itself.
+	for _, elem := range r.PatternElems[:len(r.PatternElems)-1] {
 		if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
-			paramName := elem[1 : len(elem)-1]
+			paramName := strings.Replace(elem[1:len(elem)-1], "-", "_", -1)
 			m[paramName] = tfschema.StringAttribute{
 				MarkdownDescription: paramName,
 				Required:            true,

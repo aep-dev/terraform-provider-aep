@@ -14,7 +14,7 @@ import (
 
 func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}, parameters map[string]string) (map[string]interface{}, error) {
 	suffix := ""
-	if r.CreateMethod.SupportsUserSettableCreate {
+	if r.CreateMethod != nil && r.CreateMethod.SupportsUserSettableCreate {
 		id, ok := body["id"]
 		if !ok {
 			return nil, fmt.Errorf("id field not found in %v", body)
@@ -26,7 +26,8 @@ func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 
 		suffix = fmt.Sprintf("?id=%s", idString)
 	}
-	url := createBase(r, serverUrl, parameters, suffix)
+	url := createBase(ctx, r, serverUrl, parameters, suffix)
+	tflog.Info(ctx, fmt.Sprintf("create url %s", url))
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
@@ -113,18 +114,35 @@ func Update(ctx context.Context, c *http.Client, serverUrl string, path string, 
 	return err
 }
 
-func createBase(r *api.Resource, serverUrl string, parameters map[string]string, suffix string) string {
-	url := serverUrl + "/"
-	for _, elem := range r.PatternElems {
-		if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
-			paramName := elem[1 : len(elem)-1]
-			if value, ok := parameters[paramName]; ok {
-				url += value + "/"
-			}
+func createBase(ctx context.Context, r *api.Resource, serverUrl string, parameters map[string]string, suffix string) string {
+	urlElems := []string{serverUrl}
+	tflog.Info(ctx, fmt.Sprintf("full pattern %s", r.Schema.XAEPResource.Patterns[0]))
+	patternElements := strings.Split(r.Schema.XAEPResource.Patterns[0], "/")
+	for i, elem := range patternElements {
+		tflog.Info(ctx, fmt.Sprintf("pattern elem %s", elem))
+		if i == len(patternElements)-1 {
+			tflog.Info(ctx, "skipping")
+			continue
+		}
+
+		if i%2 == 0 {
+			tflog.Info(ctx, fmt.Sprintf("adding elem %s", elem))
+			urlElems = append(urlElems, elem)
 		} else {
-			url += elem + "/"
+			paramName := elem[1 : len(elem)-1]
+			tflog.Info(ctx, fmt.Sprintf("pattern name %s", paramName))
+			tflog.Info(ctx, fmt.Sprintf("parameters %q", parameters))
+			if value, ok := parameters[paramName]; ok {
+				if strings.Contains(value, "/") {
+					value = strings.Split(value, "/")[len(strings.Split(value, "/"))-1]
+				}
+				urlElems = append(urlElems, value)
+			}
 		}
 	}
-	url = url + suffix
-	return url
+	if suffix != "" {
+		urlElems = append(urlElems, suffix)
+	}
+	tflog.Info(ctx, fmt.Sprintf("url elems %q", urlElems))
+	return strings.Join(urlElems, "/")
 }
