@@ -52,20 +52,10 @@ func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	attr, err := SchemaAttributes(*r.resource.Schema)
-	if err != nil {
-		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create schema for resource %s, got error: %s", r.name, err))
-		return
-	}
-
-	para, err := ParameterAttributes(r.resource, r.openapi)
+	attr, err := FullSchema(r.resource, r.openapi)
 	if err != nil {
 		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create additional attributes for resource %s, got error: %s", r.name, err))
 		return
-	}
-
-	for name, p := range para {
-		attr[name] = p
 	}
 
 	resp.Schema = schema.Schema{
@@ -75,15 +65,6 @@ func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest
 
 		Attributes: attr,
 	}
-}
-
-func checkIfRequired(requiredProps []string, propName string) bool {
-	for _, prop := range requiredProps {
-		if prop == propName {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -107,22 +88,28 @@ func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	dataResource := &data.Resource{}
+	dataPlan := &data.Resource{}
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataResource)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataPlan)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	jsonDataMap, err := dataResource.ToJSON()
+	parameters, err := Parameters(dataPlan, r.resource, r.openapi)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create parameters, got error: %s", err))
 		return
 	}
 
-	a, err := Create(ctx, r.resource, r.client, r.api.ServerURL, jsonDataMap)
+	body, err := Body(dataPlan, r.resource)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create body, got error: %s", err))
+		return
+	}
+
+	a, err := Create(ctx, r.resource, r.client, r.api.ServerURL, body, parameters)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create example, got error: %s", err))
@@ -131,16 +118,16 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 
 	tflog.Info(ctx, fmt.Sprintf("resource state: %v", a))
 
-	err = data.ToResource(a, dataResource)
+	err = data.ToResource(a, dataPlan)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal example, got error: %s", err))
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
+	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataPlan))
 
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, dataPlan)...)
 }
 
 func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -200,9 +187,9 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	jsonDataMap, err := dataResource.ToJSON()
+	body, err := Body(dataResource, r.resource)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal JSON, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to body, got error: %s", err))
 		return
 	}
 
@@ -217,7 +204,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	}
 
-	err = Update(ctx, r.client, r.api.ServerURL, *s.String, jsonDataMap)
+	err = Update(ctx, r.client, r.api.ServerURL, *s.String, body)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, got error: %s", err))

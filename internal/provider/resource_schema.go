@@ -14,6 +14,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// The full schema - includes all fields from body + parameters for parents.
+func FullSchema(r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+	attributes, err := SchemaAttributes(*r.Schema)
+	if err != nil {
+		return nil, err
+	}
+
+	parameterAttributes, err := ParameterAttributes(r, o)
+	if err != nil {
+		return nil, err
+	}
+
+	for name, attribute := range parameterAttributes {
+		attributes[name] = attribute
+	}
+
+	return attributes, nil
+
+}
+
 func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, error) {
 	m := make(map[string]tfschema.Attribute)
 	for name, prop := range schema.Properties {
@@ -23,6 +43,9 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 		}
 		m[ToSnakeCase(name)] = a
 	}
+	m["id"] = tfschema.StringAttribute{
+		Computed: true,
+	}
 	return m, nil
 }
 
@@ -31,22 +54,12 @@ func ParameterAttributes(r *api.Resource, o *openapi.OpenAPI) (map[string]tfsche
 	if len(r.PatternElems) < 1 {
 		return nil, fmt.Errorf("must have at least one parent pattern")
 	}
-	// Fetch pattern + remove the last part.
-	p := fmt.Sprintf("/%s", r.Schema.XAEPResource.Patterns[0])
-	parts := strings.Split(p, "/")
-	parts = parts[:len(parts)-1]
-	p = strings.Join(parts, "/")
-
-	// Fetch create method.
-	para, ok := o.Paths[p]
-	if !ok {
-		return nil, fmt.Errorf("could not find %s in paths", p)
-	}
 	m := make(map[string]tfschema.Attribute)
-	if para != nil && para.Post != nil {
-		for _, prop := range para.Post.Parameters {
-			m[prop.Name] = tfschema.StringAttribute{
-				MarkdownDescription: prop.Description,
+	for _, elem := range r.PatternElems {
+		if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
+			paramName := elem[1 : len(elem)-1]
+			m[paramName] = tfschema.StringAttribute{
+				MarkdownDescription: paramName,
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -157,4 +170,13 @@ func listType(prop openapi.Schema) (attr.Type, error) {
 		return nil, fmt.Errorf("cannot find type for %s", prop.Items.Type)
 	}
 
+}
+
+func checkIfRequired(requiredProps []string, propName string) bool {
+	for _, prop := range requiredProps {
+		if prop == propName {
+			return true
+		}
+	}
+	return false
 }

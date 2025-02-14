@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}) (map[string]interface{}, error) {
+func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl string, body map[string]interface{}, parameters map[string]string) (map[string]interface{}, error) {
 	suffix := ""
 	if r.CreateMethod.SupportsUserSettableCreate {
 		id, ok := body["id"]
@@ -26,10 +26,7 @@ func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 
 		suffix = fmt.Sprintf("?id=%s", idString)
 	}
-	url, err := createBase(ctx, r, body, serverUrl, suffix)
-	if err != nil {
-		return nil, err
-	}
+	url := createBase(r, serverUrl, parameters, suffix)
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
@@ -116,6 +113,18 @@ func Update(ctx context.Context, c *http.Client, serverUrl string, path string, 
 	return err
 }
 
-func createBase(ctx context.Context, r *api.Resource, body map[string]interface{}, serverUrl string, suffix string) (string, error) {
-	return serverUrl + "/" + r.Plural + suffix, nil
+func createBase(r *api.Resource, serverUrl string, parameters map[string]string, suffix string) string {
+	url := serverUrl + "/"
+	for _, elem := range r.PatternElems {
+		if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
+			paramName := elem[1 : len(elem)-1]
+			if value, ok := parameters[paramName]; ok {
+				url += value + "/"
+			}
+		} else {
+			url += elem + "/"
+		}
+	}
+	url = url + suffix
+	return url
 }
