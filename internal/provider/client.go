@@ -84,22 +84,17 @@ func Update(ctx context.Context, c *http.Client, serverUrl string, path string, 
 
 func createBase(ctx context.Context, r *api.Resource, serverUrl string, parameters map[string]string, suffix string) string {
 	urlElems := []string{serverUrl}
-	tflog.Info(ctx, fmt.Sprintf("full pattern %s", r.Schema.XAEPResource.Patterns[0]))
 	patternElements := strings.Split(r.Schema.XAEPResource.Patterns[0], "/")
 	for i, elem := range patternElements {
 		tflog.Info(ctx, fmt.Sprintf("pattern elem %s", elem))
 		if i == len(patternElements)-1 {
-			tflog.Info(ctx, "skipping")
 			continue
 		}
 
 		if i%2 == 0 {
-			tflog.Info(ctx, fmt.Sprintf("adding elem %s", elem))
 			urlElems = append(urlElems, elem)
 		} else {
 			paramName := elem[1 : len(elem)-1]
-			tflog.Info(ctx, fmt.Sprintf("pattern name %s", paramName))
-			tflog.Info(ctx, fmt.Sprintf("parameters %q", parameters))
 			if value, ok := parameters[paramName]; ok {
 				if strings.Contains(value, "/") {
 					value = strings.Split(value, "/")[len(strings.Split(value, "/"))-1]
