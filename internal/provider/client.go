@@ -39,22 +39,7 @@ func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 		return nil, fmt.Errorf("error creating post request: %v", err)
 	}
 
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %v", err)
-	}
-	tflog.Info(ctx, fmt.Sprintf("Response body: %q", string(respBody)))
-	var data map[string]interface{}
-	err = json.Unmarshal(respBody, &data)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
+	return MakeRequest(ctx, c, req)
 }
 
 func Read(ctx context.Context, c *http.Client, serverUrl string, path string) (map[string]interface{}, error) {
@@ -65,24 +50,7 @@ func Read(ctx context.Context, c *http.Client, serverUrl string, path string) (m
 		return nil, fmt.Errorf("error creating post request: %v", err)
 	}
 
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var data map[string]interface{}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %v", err)
-	}
-
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %v", err)
-	}
-
-	return data, nil
+	return MakeRequest(ctx, c, req)
 }
 
 func Delete(ctx context.Context, c *http.Client, serverUrl string, path string) error {
@@ -93,7 +61,7 @@ func Delete(ctx context.Context, c *http.Client, serverUrl string, path string) 
 		return fmt.Errorf("error creating delete request: %v", err)
 	}
 
-	_, err = c.Do(req)
+	_, err = MakeRequest(ctx, c, req)
 	return err
 }
 
@@ -110,7 +78,7 @@ func Update(ctx context.Context, c *http.Client, serverUrl string, path string, 
 		return fmt.Errorf("error creating delete request: %v", err)
 	}
 
-	_, err = c.Do(req)
+	_, err = MakeRequest(ctx, c, req)
 	return err
 }
 
@@ -145,4 +113,44 @@ func createBase(ctx context.Context, r *api.Resource, serverUrl string, paramete
 	}
 	tflog.Info(ctx, fmt.Sprintf("url elems %q", urlElems))
 	return strings.Join(urlElems, "/")
+}
+
+func checkErrors(ctx context.Context, body map[string]interface{}) error {
+	if body != nil {
+		if error, ok := body["error"]; ok {
+			tflog.Error(ctx, fmt.Sprintf("API returned error: %v", error))
+			return fmt.Errorf("API returned error: %v", error)
+		}
+
+		// Protobuf error messages may be returned in this format.
+		if code, ok := body["code"]; ok {
+			tflog.Error(ctx, fmt.Sprintf("API returned code: %v", code))
+			return fmt.Errorf("API returned code: %v", code)
+		}
+	}
+	return nil
+}
+
+func MakeRequest(ctx context.Context, c *http.Client, req *http.Request) (map[string]interface{}, error) {
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %v", err)
+	}
+	tflog.Info(ctx, fmt.Sprintf("Response body: %q", string(respBody)))
+
+	var data map[string]interface{}
+	err = json.Unmarshal(respBody, &data)
+	if err != nil {
+		return nil, err
+	}
+	err = checkErrors(ctx, data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
