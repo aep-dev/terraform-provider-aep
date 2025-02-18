@@ -118,6 +118,12 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 
 	tflog.Info(ctx, fmt.Sprintf("resource state: %v", a))
 
+	_, ok := a["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create example, expected path in resp: %q", a))
+	}
+	a["id"] = a["path"]
+
 	err = data.ToResource(a, dataPlan)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal example, got error: %s", err))
@@ -162,6 +168,12 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
 	}
+
+	_, ok = a["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, expected path in resp: %q", a))
+	}
+	a["id"] = a["path"]
 
 	err = data.ToResource(a, dataResource)
 	if err != nil {
@@ -217,6 +229,12 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	tflog.Info(ctx, fmt.Sprintf("Create response: %v", a))
+
+	_, ok = a["path"]
+	if !ok {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, expected path in resp: %q", a))
+	}
+	a["id"] = a["path"]
 
 	err = data.ToResource(a, dataResource)
 	if err != nil {

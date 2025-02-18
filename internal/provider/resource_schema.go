@@ -43,6 +43,7 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 		}
 		m[ToSnakeCase(name)] = a
 	}
+
 	m["id"] = tfschema.StringAttribute{
 		Computed: true,
 	}

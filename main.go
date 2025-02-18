@@ -7,6 +7,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net/http"
 
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -47,7 +48,7 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	err = providerserver.Serve(context.Background(), provider.New(version, gen, oas), opts)
+	err = providerserver.Serve(context.Background(), provider.New(version, gen, oas, http.DefaultClient), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())

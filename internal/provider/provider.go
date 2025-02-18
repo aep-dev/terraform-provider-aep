@@ -30,6 +30,8 @@ type ScaffoldingProvider struct {
 	generator *GeneratedProviderData
 
 	openapi *openapi.OpenAPI
+
+	client *http.Client
 }
 
 // ScaffoldingProviderModel describes the provider data model.
@@ -54,9 +56,8 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 	}
 
 	// Example client configuration for data sources and resources
-	client := http.DefaultClient
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	resp.DataSourceData = p.client
+	resp.ResourceData = p.client
 }
 
 func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
@@ -75,12 +76,13 @@ func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.F
 	return []func() function.Function{}
 }
 
-func New(version string, g *GeneratedProviderData, oas *openapi.OpenAPI) func() provider.Provider {
+func New(version string, g *GeneratedProviderData, oas *openapi.OpenAPI, client *http.Client) func() provider.Provider {
 	return func() provider.Provider {
 		return &ScaffoldingProvider{
 			version:   version,
 			generator: g,
 			openapi:   oas,
+			client:    client,
 		}
 	}
 }

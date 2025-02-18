@@ -3,21 +3,22 @@ module github.com/hashicorp/terraform-provider-scaffolding
 go 1.22.7
 
 require (
+	github.com/aep-dev/aep-lib-go v0.0.0-20250217200129-e8cdedc0dfd4
+	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/terraform-plugin-framework v1.13.0
 	github.com/hashicorp/terraform-plugin-go v0.25.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
+	github.com/jarcoal/httpmock v1.3.1
 )
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
-	github.com/aep-dev/aep-lib-go v0.0.0-20250121233519-8bc026ce637e // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect

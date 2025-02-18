@@ -58,7 +58,7 @@ func Create(ctx context.Context, r *api.Resource, c *http.Client, serverUrl stri
 }
 
 func Read(ctx context.Context, c *http.Client, serverUrl string, path string) (map[string]interface{}, error) {
-	url := fmt.Sprintf("%s/%s", serverUrl, path)
+	url := fmt.Sprintf("%s/%s", serverUrl, strings.TrimPrefix(path, "/"))
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -86,7 +86,7 @@ func Read(ctx context.Context, c *http.Client, serverUrl string, path string) (m
 }
 
 func Delete(ctx context.Context, c *http.Client, serverUrl string, path string) error {
-	url := fmt.Sprintf("%s/%s", serverUrl, path)
+	url := fmt.Sprintf("%s/%s", serverUrl, strings.TrimPrefix(path, "/"))
 
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
@@ -98,7 +98,7 @@ func Delete(ctx context.Context, c *http.Client, serverUrl string, path string) 
 }
 
 func Update(ctx context.Context, c *http.Client, serverUrl string, path string, body map[string]interface{}) error {
-	url := fmt.Sprintf("%s/%s", serverUrl, path)
+	url := fmt.Sprintf("%s/%s", serverUrl, strings.TrimPrefix(path, "/"))
 
 	reqBody, err := json.Marshal(body)
 	if err != nil {
@@ -116,11 +116,9 @@ func Update(ctx context.Context, c *http.Client, serverUrl string, path string, 
 
 func createBase(ctx context.Context, r *api.Resource, serverUrl string, parameters map[string]string, suffix string) string {
 	urlElems := []string{serverUrl}
-	tflog.Info(ctx, fmt.Sprintf("full pattern %s", r.Schema.XAEPResource.Patterns[0]))
-	patternElements := strings.Split(r.Schema.XAEPResource.Patterns[0], "/")
-	for i, elem := range patternElements {
+	for i, elem := range r.PatternElems {
 		tflog.Info(ctx, fmt.Sprintf("pattern elem %s", elem))
-		if i == len(patternElements)-1 {
+		if i == len(r.PatternElems)-1 {
 			tflog.Info(ctx, "skipping")
 			continue
 		}
