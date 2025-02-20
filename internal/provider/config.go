@@ -6,7 +6,7 @@ package provider
 const OpenAPIPath = "http://localhost:8081/openapi.json"
 
 // The name of your provider.
-// All resources will have the prefix `prefix_resource`
+// All resources will have the prefix `prefix_resource`.
 const ProviderPrefix = "scaffolding"
 
 // Do not change anything below here!
