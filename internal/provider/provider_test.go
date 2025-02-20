@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
@@ -37,8 +38,119 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 func testAccPreCheck(t *testing.T) {
 	httpmock.Activate()
 
-	allResources := make(map[string]interface{})
+	allPublishers := make(map[string]interface{})
+	var publisherCounter = 1
+
+	allBooks := make(map[string]interface{})
 	var bookCounter = 1
+
+	// Books Mock Server.
+	httpmock.RegisterResponder("POST", "=~^http://localhost:8081/publishers/\\d+/books",
+		func(req *http.Request) (*http.Response, error) {
+			var requestBody map[string]interface{}
+			err := json.NewDecoder(req.Body).Decode(&requestBody)
+			if err != nil {
+				return httpmock.NewStringResponse(400, ""), nil
+			}
+
+			// Ensure publisher has been created.
+			publisherNumber := req.URL.Path[len("/publishers/"):]
+			publisherNumber = strings.Split(publisherNumber, "/")[0]
+			_, ok := allPublishers[publisherNumber]
+			if !ok {
+				return httpmock.NewStringResponse(404, ""), nil
+			}
+
+			// Create book.
+			allBooks[fmt.Sprintf("%d", bookCounter)] = requestBody
+			requestBody["path"] = fmt.Sprintf("/publishers/%s/books/%d", publisherNumber, bookCounter)
+			bookCounter += 1
+			jsonRequestBody, err := json.Marshal(requestBody)
+			if err != nil {
+				return httpmock.NewStringResponse(500, ""), nil
+			}
+			return httpmock.NewStringResponse(201, string(jsonRequestBody)), nil
+		},
+	)
+
+	httpmock.RegisterResponder("GET", "=~^http://localhost:8081/publishers/\\d+/books/\\d+",
+		func(req *http.Request) (*http.Response, error) {
+			// Ensure publisher has been created.
+			publisherNumber := req.URL.Path[len("/publishers/"):]
+			publisherNumber = strings.Split(publisherNumber, "/")[0]
+			_, ok := allPublishers[publisherNumber]
+			if !ok {
+				return httpmock.NewStringResponse(404, fmt.Sprintf("could not find publisher %s", publisherNumber)), nil
+			}
+
+			bookID := strings.Split(req.URL.Path, "/")[len(strings.Split(req.URL.Path, "/"))-1]
+			resource, ok := allBooks[bookID]
+			if !ok {
+				return httpmock.NewStringResponse(404, fmt.Sprintf("could not find book %s", bookID)), nil
+			}
+			resourceMap, ok := resource.(map[string]interface{})
+			if !ok {
+				return httpmock.NewStringResponse(500, ""), nil
+			}
+			resourceMap["path"] = fmt.Sprintf("/publishers/%s/books/%s", publisherNumber, bookID)
+			jsonResource, err := json.Marshal(resource)
+			publisherCounter += 1
+			if err != nil {
+				return httpmock.NewStringResponse(500, ""), nil
+			}
+			return httpmock.NewStringResponse(200, string(jsonResource)), nil
+		},
+	)
+
+	httpmock.RegisterResponder("PATCH", "=~^http://localhost:8081/publishers/\\d+/books/\\d+",
+		func(req *http.Request) (*http.Response, error) {
+			publisherID := strings.Split(req.URL.Path[len("/publishers/"):], "/")[0]
+			_, ok := allPublishers[publisherID]
+			if !ok {
+				return httpmock.NewStringResponse(404, ""), nil
+			}
+
+			bookID := strings.Split(req.URL.Path, "/")[len(strings.Split(req.URL.Path, "/"))-1]
+			_, ok = allBooks[bookID]
+			if !ok {
+				return httpmock.NewStringResponse(404, ""), nil
+			}
+
+			var requestBody map[string]interface{}
+			err := json.NewDecoder(req.Body).Decode(&requestBody)
+			if err != nil {
+				return httpmock.NewStringResponse(400, ""), nil
+			}
+			requestBody["path"] = fmt.Sprintf("/publishers/%s/books/%s", publisherID, bookID)
+			allBooks[bookID] = requestBody
+			jsonResource, err := json.Marshal(requestBody)
+			if err != nil {
+				return httpmock.NewStringResponse(500, ""), nil
+			}
+			return httpmock.NewStringResponse(200, string(jsonResource)), nil
+		},
+	)
+
+	httpmock.RegisterResponder("DELETE", "=~^http://localhost:8081/publishers/\\d+/books/\\d+",
+		func(req *http.Request) (*http.Response, error) {
+			publisherID := req.URL.Path[len("/publishers/"):]
+			_, ok := allPublishers[publisherID]
+			if !ok {
+				return httpmock.NewStringResponse(404, ""), nil
+			}
+
+			bookID := strings.Split(req.URL.Path, "/")[len(strings.Split(req.URL.Path, "/"))-1]
+			_, ok = allBooks[bookID]
+			if !ok {
+				return httpmock.NewStringResponse(404, ""), nil
+			}
+
+			delete(allBooks, bookID)
+
+			return httpmock.NewStringResponse(200, ""), nil
+		},
+	)
+
 	httpmock.RegisterResponder("POST", "http://localhost:8081/publishers",
 		func(req *http.Request) (*http.Response, error) {
 			var requestBody map[string]interface{}
@@ -46,9 +158,9 @@ func testAccPreCheck(t *testing.T) {
 			if err != nil {
 				return httpmock.NewStringResponse(400, ""), nil
 			}
-			allResources[fmt.Sprintf("%d", bookCounter)] = requestBody
-			requestBody["path"] = fmt.Sprintf("/publishers/%d", bookCounter)
-			bookCounter += 1
+			allPublishers[fmt.Sprintf("%d", publisherCounter)] = requestBody
+			requestBody["path"] = fmt.Sprintf("/publishers/%d", publisherCounter)
+			publisherCounter += 1
 			jsonRequestBody, err := json.Marshal(requestBody)
 			if err != nil {
 				return httpmock.NewStringResponse(500, ""), nil
@@ -60,7 +172,7 @@ func testAccPreCheck(t *testing.T) {
 	httpmock.RegisterResponder("GET", "=~^http://localhost:8081/publishers/\\d+",
 		func(req *http.Request) (*http.Response, error) {
 			publisherID := req.URL.Path[len("/publishers/"):]
-			resource, ok := allResources[publisherID]
+			resource, ok := allPublishers[publisherID]
 			if !ok {
 				return httpmock.NewStringResponse(404, ""), nil
 			}
@@ -70,7 +182,7 @@ func testAccPreCheck(t *testing.T) {
 			}
 			resourceMap["path"] = fmt.Sprintf("/publishers/%s", publisherID)
 			jsonResource, err := json.Marshal(resource)
-			bookCounter += 1
+			publisherCounter += 1
 			if err != nil {
 				return httpmock.NewStringResponse(500, ""), nil
 			}
@@ -81,7 +193,7 @@ func testAccPreCheck(t *testing.T) {
 	httpmock.RegisterResponder("PATCH", "=~^http://localhost:8081/publishers/\\d+",
 		func(req *http.Request) (*http.Response, error) {
 			publisherID := req.URL.Path[len("/publishers/"):]
-			_, ok := allResources[publisherID]
+			_, ok := allPublishers[publisherID]
 			if !ok {
 				return httpmock.NewStringResponse(404, ""), nil
 			}
@@ -91,7 +203,7 @@ func testAccPreCheck(t *testing.T) {
 			if err != nil {
 				return httpmock.NewStringResponse(400, ""), nil
 			}
-			allResources[publisherID] = requestBody
+			allPublishers[publisherID] = requestBody
 			requestBody["path"] = fmt.Sprintf("/publishers/%s", publisherID)
 			jsonResource, err := json.Marshal(requestBody)
 			if err != nil {
@@ -104,12 +216,12 @@ func testAccPreCheck(t *testing.T) {
 	httpmock.RegisterResponder("DELETE", "=~^http://localhost:8081/publishers/\\d+",
 		func(req *http.Request) (*http.Response, error) {
 			publisherID := req.URL.Path[len("/publishers/"):]
-			_, ok := allResources[publisherID]
+			_, ok := allPublishers[publisherID]
 			if !ok {
 				return httpmock.NewStringResponse(404, ""), nil
 			}
 
-			delete(allResources, publisherID)
+			delete(allPublishers, publisherID)
 
 			return httpmock.NewStringResponse(200, ""), nil
 		},

@@ -15,13 +15,13 @@ import (
 )
 
 // The full schema - includes all fields from body + parameters for parents.
-func FullSchema(r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+func FullSchema(r *api.Resource) (map[string]tfschema.Attribute, error) {
 	attributes, err := SchemaAttributes(*r.Schema)
 	if err != nil {
 		return nil, err
 	}
 
-	parameterAttributes, err := ParameterAttributes(r, o)
+	parameterAttributes, err := ParameterAttributes(r)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 }
 
 // Attributes coming from parents.
-func ParameterAttributes(r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+func ParameterAttributes(r *api.Resource) (map[string]tfschema.Attribute, error) {
 	m := make(map[string]tfschema.Attribute)
 
 	// Do not go through last element, since that's the resource itself.

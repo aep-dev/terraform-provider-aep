@@ -844,8 +844,7 @@
             "readOnly": true
           },
           "price": {
-            "type": "number",
-            "format": "float"
+            "type": "string"
           },
           "published": {
             "type": "boolean"

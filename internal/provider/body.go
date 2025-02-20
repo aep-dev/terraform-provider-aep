@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
-	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
 )
@@ -32,13 +31,13 @@ func Body(d *data.Resource, r *api.Resource) (map[string]interface{}, error) {
 }
 
 // Returns a map that can be used to substitute parent values into a URI.
-func Parameters(ctx context.Context, d *data.Resource, r *api.Resource, o *openapi.OpenAPI) (map[string]string, error) {
+func Parameters(ctx context.Context, d *data.Resource, r *api.Resource) (map[string]string, error) {
 	jsonData, err := d.ToJSON()
 	if err != nil {
 		return nil, err
 	}
 
-	parameterAttributes, err := ParameterAttributes(r, o)
+	parameterAttributes, err := ParameterAttributes(r)
 	if err != nil {
 		return nil, err
 	}
@@ -56,4 +55,45 @@ func Parameters(ctx context.Context, d *data.Resource, r *api.Resource, o *opena
 		}
 	}
 	return result, nil
+}
+
+// Create state from the API response and plan.
+func State(resp map[string]interface{}, plan *data.Resource, r *api.Resource) (*data.Resource, error) {
+	s, err := SchemaAttributes(*r.Schema)
+	if err != nil {
+		return nil, err
+	}
+	p, err := ParameterAttributes(r)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]interface{})
+	for k := range s {
+		v, ok := resp[k]
+		if ok {
+			result[k] = v
+		}
+	}
+
+	// Add parameters back into state.
+	// These aren't returned by the API.
+	for k := range p {
+		v, ok := plan.Values[k]
+		if ok && v.String != nil {
+			result[k] = *v.String
+		}
+	}
+
+	_, ok := result["path"]
+	if !ok {
+		return nil, fmt.Errorf("Expected path in response %v", resp)
+	}
+	result["id"] = result["path"]
+
+	err = data.ToResource(result, plan)
+	if err != nil {
+		return nil, err
+	}
+	return plan, nil
 }
