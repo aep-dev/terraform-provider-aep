@@ -35,7 +35,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	},
 }
 
-func testAccPreCheck(t *testing.T) {
+func testAccPreCheck(_ *testing.T) {
 	httpmock.Activate()
 
 	allPublishers := make(map[string]interface{})
@@ -50,7 +50,7 @@ func testAccPreCheck(t *testing.T) {
 			var requestBody map[string]interface{}
 			err := json.NewDecoder(req.Body).Decode(&requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(400, ""), nil
+				return httpmock.NewStringResponse(400, ""), err
 			}
 
 			// Ensure publisher has been created.
@@ -67,7 +67,7 @@ func testAccPreCheck(t *testing.T) {
 			bookCounter += 1
 			jsonRequestBody, err := json.Marshal(requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(500, ""), nil
+				return httpmock.NewStringResponse(500, ""), err
 			}
 			return httpmock.NewStringResponse(201, string(jsonRequestBody)), nil
 		},
@@ -96,7 +96,7 @@ func testAccPreCheck(t *testing.T) {
 			jsonResource, err := json.Marshal(resource)
 			publisherCounter += 1
 			if err != nil {
-				return httpmock.NewStringResponse(500, ""), nil
+				return httpmock.NewStringResponse(500, ""), err
 			}
 			return httpmock.NewStringResponse(200, string(jsonResource)), nil
 		},
@@ -119,13 +119,13 @@ func testAccPreCheck(t *testing.T) {
 			var requestBody map[string]interface{}
 			err := json.NewDecoder(req.Body).Decode(&requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(400, ""), nil
+				return httpmock.NewStringResponse(400, ""), err
 			}
 			requestBody["path"] = fmt.Sprintf("/publishers/%s/books/%s", publisherID, bookID)
 			allBooks[bookID] = requestBody
 			jsonResource, err := json.Marshal(requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(500, ""), nil
+				return httpmock.NewStringResponse(500, ""), err
 			}
 			return httpmock.NewStringResponse(200, string(jsonResource)), nil
 		},
@@ -156,14 +156,14 @@ func testAccPreCheck(t *testing.T) {
 			var requestBody map[string]interface{}
 			err := json.NewDecoder(req.Body).Decode(&requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(400, ""), nil
+				return httpmock.NewStringResponse(400, ""), err
 			}
 			allPublishers[fmt.Sprintf("%d", publisherCounter)] = requestBody
 			requestBody["path"] = fmt.Sprintf("/publishers/%d", publisherCounter)
 			publisherCounter += 1
 			jsonRequestBody, err := json.Marshal(requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(500, ""), nil
+				return httpmock.NewStringResponse(500, ""), err
 			}
 			return httpmock.NewStringResponse(201, string(jsonRequestBody)), nil
 		},
@@ -184,7 +184,7 @@ func testAccPreCheck(t *testing.T) {
 			jsonResource, err := json.Marshal(resource)
 			publisherCounter += 1
 			if err != nil {
-				return httpmock.NewStringResponse(500, ""), nil
+				return httpmock.NewStringResponse(500, ""), err
 			}
 			return httpmock.NewStringResponse(200, string(jsonResource)), nil
 		},
@@ -201,13 +201,13 @@ func testAccPreCheck(t *testing.T) {
 			var requestBody map[string]interface{}
 			err := json.NewDecoder(req.Body).Decode(&requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(400, ""), nil
+				return httpmock.NewStringResponse(400, ""), err
 			}
 			allPublishers[publisherID] = requestBody
 			requestBody["path"] = fmt.Sprintf("/publishers/%s", publisherID)
 			jsonResource, err := json.Marshal(requestBody)
 			if err != nil {
-				return httpmock.NewStringResponse(500, ""), nil
+				return httpmock.NewStringResponse(500, ""), err
 			}
 			return httpmock.NewStringResponse(200, string(jsonResource)), nil
 		},
