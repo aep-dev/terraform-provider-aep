@@ -52,7 +52,7 @@ func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	attr, err := FullSchema(r.resource, r.openapi)
+	attr, err := FullSchema(r.resource)
 	if err != nil {
 		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create additional attributes for resource %s, got error: %s", r.name, err))
 		return
@@ -97,7 +97,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	parameters, err := Parameters(ctx, dataPlan, r.resource, r.openapi)
+	parameters, err := Parameters(ctx, dataPlan, r.resource)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create parameters, got error: %s", err))
 		return
@@ -116,18 +116,14 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("resource state: %v", a))
-
-	err = data.ToResource(a, dataPlan)
+	dataState, err := State(a, dataPlan, r.resource)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal example, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Create: unable to create state, got error: %s", err))
 		return
+
 	}
-
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataPlan))
-
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, dataPlan)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, dataState)...)
 }
 
 func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -163,16 +159,15 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	err = data.ToResource(a, dataResource)
+	dataState, err := State(a, dataResource, r.resource)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal example, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Read: unable to create state, got error: %s", err))
 		return
+
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
-
 	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, dataState)...)
 }
 
 func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -218,16 +213,15 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	tflog.Info(ctx, fmt.Sprintf("Create response: %v", a))
 
-	err = data.ToResource(a, dataResource)
+	toBeState, err := State(a, dataResource, r.resource)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to marshal example, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Update: unable to create state, got error: %s", err))
 		return
+
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("about to save: %v", dataResource))
-
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, dataResource)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, toBeState)...)
 }
 
 func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
