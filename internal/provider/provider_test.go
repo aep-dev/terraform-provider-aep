@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/jarcoal/httpmock"
@@ -26,12 +25,12 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 		if err != nil {
 			return nil, fmt.Errorf("unable to create generated data %v", err)
 		}
-		oas, err := openapi.FetchOpenAPI("testdata/oas.yaml")
-		if err != nil {
-			return nil, fmt.Errorf("unable to fetch oas spec %v", err)
-		}
 		mockClient := &http.Client{}
-		return providerserver.NewProtocol6WithError(New("test", gen, oas, mockClient)())()
+		providerConfig := ProviderConfig{
+			OpenAPIPath:    "http://localhost:8081/openapi.json",
+			ProviderPrefix: "scaffolding",
+		}
+		return providerserver.NewProtocol6WithError(New("test", gen, mockClient, providerConfig)())()
 	},
 }
 
