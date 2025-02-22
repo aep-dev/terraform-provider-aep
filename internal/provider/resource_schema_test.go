@@ -34,8 +34,7 @@ func TestSchemaAttributes(t *testing.T) {
 					Optional:            true,
 				},
 				"id": tfschema.StringAttribute{
-					MarkdownDescription: "The id of the resource",
-					Optional:            true,
+					Computed: true,
 				},
 			},
 		},
@@ -53,6 +52,9 @@ func TestSchemaAttributes(t *testing.T) {
 				"foo": tfschema.StringAttribute{
 					MarkdownDescription: "foo description",
 					Required:            true,
+				},
+				"id": tfschema.StringAttribute{
+					Computed: true,
 				},
 			},
 		},
@@ -83,6 +85,9 @@ func TestSchemaAttributes(t *testing.T) {
 					MarkdownDescription: "",
 					Optional:            true,
 				},
+				"id": tfschema.StringAttribute{
+					Computed: true,
+				},
 			},
 		},
 		"array": {
@@ -101,6 +106,9 @@ func TestSchemaAttributes(t *testing.T) {
 					ElementType:         types.StringType,
 					MarkdownDescription: "",
 					Optional:            true,
+				},
+				"id": tfschema.StringAttribute{
+					Computed: true,
 				},
 			},
 		},

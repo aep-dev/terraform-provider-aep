@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider"
 )
@@ -43,12 +42,7 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	oas, err := openapi.FetchOpenAPI(path)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	err = providerserver.Serve(context.Background(), provider.New(version, gen, oas, http.DefaultClient), opts)
+	err = providerserver.Serve(context.Background(), provider.New(version, gen, http.DefaultClient, provider.NewProviderConfig()), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())

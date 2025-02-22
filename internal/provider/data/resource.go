@@ -82,7 +82,11 @@ func (r *Resource) FromTerraform5Value(value tftypes.Value) error {
 	// We know these kinds of conversions are safe now, as we checked the type
 	// at the beginning.
 	r.Values = *values.Object
-	r.objectType = value.Type().(tftypes.Object)
+	v, ok := value.Type().(tftypes.Object)
+	if !ok {
+		return fmt.Errorf("value %v is not a object", value.Type())
+	}
+	r.objectType = v
 	return nil
 }
 

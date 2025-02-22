@@ -2,7 +2,7 @@ package data
 
 import "math/big"
 
-// Helper functions for creating pointers
+// Helper functions for creating pointers.
 func String(v string) *string {
 	return &v
 }

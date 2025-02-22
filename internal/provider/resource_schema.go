@@ -35,6 +35,10 @@ func FullSchema(r *api.Resource) (map[string]tfschema.Attribute, error) {
 }
 
 func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, error) {
+	return SchemaAttributes_helper(schema, true)
+}
+
+func SchemaAttributes_helper(schema openapi.Schema, addId bool) (map[string]tfschema.Attribute, error) {
 	m := make(map[string]tfschema.Attribute)
 	for name, prop := range schema.Properties {
 		a, err := schemaAttribute(prop, name, schema.Required)
@@ -44,8 +48,10 @@ func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, err
 		m[ToSnakeCase(name)] = a
 	}
 
-	m["id"] = tfschema.StringAttribute{
-		Computed: true,
+	if addId {
+		m["id"] = tfschema.StringAttribute{
+			Computed: true,
+		}
 	}
 	return m, nil
 }
@@ -111,7 +117,7 @@ func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (
 			Optional:            !required,
 		}, nil
 	case "object":
-		no, err := SchemaAttributes(prop)
+		no, err := SchemaAttributes_helper(prop, false)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +130,7 @@ func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (
 		}, nil
 	case "array":
 		if prop.Items.Type == "object" {
-			no, err := SchemaAttributes(*prop.Items)
+			no, err := SchemaAttributes_helper(*prop.Items, false)
 			if err != nil {
 				return nil, err
 			}

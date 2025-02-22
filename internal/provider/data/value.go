@@ -5,6 +5,7 @@ package data
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -47,17 +48,33 @@ func ToTerraform5Value(v Value, t tftypes.Type) (tftypes.Value, error) {
 	case t.Is(tftypes.Number):
 		return tftypes.NewValue(tftypes.Number, v.Number), nil
 	case t.Is(tftypes.List{}):
-		return listToTerraform5Value(v.List, t.(tftypes.List))
+		l, ok := t.(tftypes.List)
+		if !ok {
+			return tftypes.Value{}, fmt.Errorf("%v is not a list", t)
+		}
+		return listToTerraform5Value(v.List, l)
 	case t.Is(tftypes.Map{}):
-		return mapToTerraform5Value(v.Map, t.(tftypes.Map))
+		m, ok := t.(tftypes.Map)
+		if !ok {
+			return tftypes.Value{}, fmt.Errorf("%v is not a map", t)
+		}
+		return mapToTerraform5Value(v.Map, m)
 	case t.Is(tftypes.Object{}):
-		object, err := objectToTerraform5Value(v.Object, t.(tftypes.Object))
+		o, ok := t.(tftypes.Object)
+		if !ok {
+			return tftypes.Value{}, fmt.Errorf("%v is not a object", t)
+		}
+		object, err := objectToTerraform5Value(v.Object, o)
 		if err != nil {
 			return tftypes.Value{}, err
 		}
 		return tftypes.NewValue(t, object), nil
 	case t.Is(tftypes.Set{}):
-		return setToTerraform5Value(v.Set, t.(tftypes.Set))
+		s, ok := t.(tftypes.Set)
+		if !ok {
+			return tftypes.Value{}, fmt.Errorf("%v is not a set", t)
+		}
+		return setToTerraform5Value(v.Set, s)
 	default:
 		return tftypes.Value{}, errors.New("Unrecognized type: " + t.String())
 	}

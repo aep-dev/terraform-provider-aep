@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
-	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,13 +20,12 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
 			resource: r,
 			api:      a,
 			name:     n,
-			openapi:  o,
 		}
 	}
 }
@@ -41,7 +39,6 @@ type ExampleResource struct {
 	resource *api.Resource
 	api      *api.API
 	name     string
-	openapi  *openapi.OpenAPI
 
 	// Client will be configured at plan/apply time in the Configure() function.
 	client *http.Client
@@ -59,8 +56,6 @@ func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest
 	}
 
 	resp.Schema = schema.Schema{
-		// This description is used by the documentation generator and the language server.
-		// TODO: Add description.
 		MarkdownDescription: r.resource.Singular,
 
 		Attributes: attr,
@@ -144,12 +139,12 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	pathInterface, ok := jsonDataMap["path"]
 	if !ok {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to find path"))
+		resp.Diagnostics.AddError("Client Error", "Unable to find path")
 		return
 	}
 	path, ok := pathInterface.(string)
 	if !ok {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to convert path to string"))
+		resp.Diagnostics.AddError("Client Error", "Unable to convert path to string")
 		return
 	}
 
@@ -190,11 +185,11 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	s, ok := dataState.Values["path"]
 	if !ok {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state"))
+		resp.Diagnostics.AddError("Client Error", "Unable to fetch patch from state")
 		return
 	}
 	if s.String == nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state - pointer empty"))
+		resp.Diagnostics.AddError("Client Error", "Unable to fetch patch from state - pointer empty")
 		return
 
 	}
@@ -236,11 +231,11 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	s, ok := dataResource.Values["path"]
 	if !ok {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state"))
+		resp.Diagnostics.AddError("Client Error", "Unable to fetch patch from state")
 		return
 	}
 	if s.String == nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to fetch patch from state - pointer empty"))
+		resp.Diagnostics.AddError("Client Error", "Unable to fetch patch from state - pointer empty")
 		return
 
 	}
