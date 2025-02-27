@@ -5,8 +5,8 @@ package provider
 
 import (
 	"context"
-	"net/http"
 
+	"github.com/aep-dev/aep-lib-go/pkg/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -28,7 +28,7 @@ type ScaffoldingProvider struct {
 	// generator is set to the information created from the OpenAPI spec.
 	generator *GeneratedProviderData
 
-	client *http.Client
+	client *client.Client
 
 	config ProviderConfig
 }
@@ -75,7 +75,7 @@ func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.F
 	return []func() function.Function{}
 }
 
-func New(version string, g *GeneratedProviderData, client *http.Client, config ProviderConfig) func() provider.Provider {
+func New(version string, g *GeneratedProviderData, client *client.Client, config ProviderConfig) func() provider.Provider {
 	return func() provider.Provider {
 		return &ScaffoldingProvider{
 			version:   version,

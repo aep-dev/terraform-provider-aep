@@ -6,9 +6,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
+	"github.com/aep-dev/aep-lib-go/pkg/client"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -41,7 +41,7 @@ type ExampleResource struct {
 	name     string
 
 	// Client will be configured at plan/apply time in the Configure() function.
-	client *http.Client
+	client *client.Client
 }
 
 func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -68,7 +68,7 @@ func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
+	client, ok := req.ProviderData.(*client.Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -104,7 +104,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	a, err := Create(ctx, r.resource, r.client, r.api.ServerURL, body, parameters)
+	a, err := r.client.Create(ctx, r.resource, r.api.ServerURL, body, parameters)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create example, got error: %s", err))
@@ -148,7 +148,7 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	a, err := Read(ctx, r.client, r.api.ServerURL, path)
+	a, err := r.client.Get(ctx, r.api.ServerURL, path)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -194,14 +194,14 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	}
 
-	err = Update(ctx, r.client, r.api.ServerURL, *s.String, body)
+	err = r.client.Update(ctx, r.api.ServerURL, *s.String, body)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, got error: %s", err))
 		return
 	}
 
-	a, err := Read(ctx, r.client, r.api.ServerURL, *s.String)
+	a, err := r.client.Get(ctx, r.api.ServerURL, *s.String)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
 		return
@@ -240,7 +240,7 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	}
 
-	err := Delete(ctx, r.client, r.api.ServerURL, *s.String)
+	err := r.client.Delete(ctx, r.api.ServerURL, *s.String)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete example, got error: %s", err))
 		return
