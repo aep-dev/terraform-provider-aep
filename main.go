@@ -39,7 +39,7 @@ func main() {
 		Debug:   debug,
 	}
 
-	gen, err := provider.CreateGeneratedProviderData(path)
+	gen, err := provider.CreateGeneratedProviderData(path, pathPrefix)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

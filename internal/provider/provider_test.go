@@ -22,7 +22,7 @@ import (
 // reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"scaffolding": func() (tfprotov6.ProviderServer, error) {
-		gen, err := CreateGeneratedProviderData("testdata/oas.yaml")
+		gen, err := CreateGeneratedProviderData("testdata/oas.yaml", "")
 		if err != nil {
 			return nil, fmt.Errorf("unable to create generated data %v", err)
 		}
