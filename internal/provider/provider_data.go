@@ -12,13 +12,13 @@ type GeneratedProviderData struct {
 	api    *api.API
 }
 
-func CreateGeneratedProviderData(path string) (*GeneratedProviderData, error) {
+func CreateGeneratedProviderData(path string, pathPrefix string) (*GeneratedProviderData, error) {
 	oas, err := openapi.FetchOpenAPI(path)
 	if err != nil {
 		return nil, err
 	}
 
-	a, err := api.GetAPI(oas, "", "")
+	a, err := api.GetAPI(oas, "", pathPrefix)
 	if err != nil {
 		return nil, err
 	}

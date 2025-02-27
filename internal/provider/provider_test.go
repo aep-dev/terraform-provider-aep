@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aep-dev/aep-lib-go/pkg/client"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/jarcoal/httpmock"
@@ -21,11 +22,11 @@ import (
 // reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"scaffolding": func() (tfprotov6.ProviderServer, error) {
-		gen, err := CreateGeneratedProviderData("testdata/oas.yaml")
+		gen, err := CreateGeneratedProviderData("testdata/oas.yaml", "")
 		if err != nil {
 			return nil, fmt.Errorf("unable to create generated data %v", err)
 		}
-		mockClient := &http.Client{}
+		mockClient := client.NewClient(&http.Client{})
 		providerConfig := ProviderConfig{
 			OpenAPIPath:    "http://localhost:8081/openapi.json",
 			ProviderPrefix: "scaffolding",
