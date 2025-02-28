@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -12,11 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // The full schema - includes all fields from body + parameters for parents.
-func FullSchema(r *api.Resource) (map[string]tfschema.Attribute, error) {
-	attributes, err := SchemaAttributes(*r.Schema)
+func FullSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+	attributes, err := SchemaAttributes(ctx, *r.Schema, o)
 	if err != nil {
 		return nil, err
 	}
@@ -34,18 +36,19 @@ func FullSchema(r *api.Resource) (map[string]tfschema.Attribute, error) {
 
 }
 
-func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, error) {
-	return SchemaAttributes_helper(schema, true)
+func SchemaAttributes(ctx context.Context, schema openapi.Schema, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
+	return SchemaAttributes_helper(ctx, schema, true, o)
 }
 
-func SchemaAttributes_helper(schema openapi.Schema, addId bool) (map[string]tfschema.Attribute, error) {
+func SchemaAttributes_helper(ctx context.Context, schema openapi.Schema, addId bool, o *openapi.OpenAPI) (map[string]tfschema.Attribute, error) {
 	m := make(map[string]tfschema.Attribute)
 	for name, prop := range schema.Properties {
-		a, err := schemaAttribute(prop, name, schema.Required)
+		a, err := schemaAttribute(ctx, prop, name, schema.Required, o)
 		if err != nil {
-			return nil, err
+			tflog.Error(ctx, fmt.Sprintf("could not create type for %v with error %s", prop, err))
+		} else {
+			m[strings.Replace(ToSnakeCase(name), "@", "", -1)] = a
 		}
-		m[ToSnakeCase(name)] = a
 	}
 
 	if addId {
@@ -85,8 +88,18 @@ func ToSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (tfschema.Attribute, error) {
+func schemaAttribute(ctx context.Context, prop openapi.Schema, name string, requiredProps []string, o *openapi.OpenAPI) (tfschema.Attribute, error) {
 	required := checkIfRequired(requiredProps, name)
+	if prop.Ref != "" {
+		s, err := o.DereferenceSchema(prop)
+		if err != nil {
+			return nil, err
+		}
+		if s == nil {
+			return nil, fmt.Errorf("ref not found for %s", prop.Ref)
+		}
+		return schemaAttribute(ctx, *s, name, requiredProps, o)
+	}
 	switch prop.Type {
 	case "number":
 		return tfschema.NumberAttribute{
@@ -117,7 +130,7 @@ func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (
 			Optional:            !required,
 		}, nil
 	case "object":
-		no, err := SchemaAttributes_helper(prop, false)
+		no, err := SchemaAttributes_helper(ctx, prop, false, o)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +143,7 @@ func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (
 		}, nil
 	case "array":
 		if prop.Items.Type == "object" {
-			no, err := SchemaAttributes_helper(*prop.Items, false)
+			no, err := SchemaAttributes_helper(ctx, *prop.Items, false, o)
 			if err != nil {
 				return nil, err
 			}
@@ -158,7 +171,7 @@ func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (
 			}, nil
 		}
 	default:
-		return nil, fmt.Errorf("cannot find type for %s", prop.Type)
+		return nil, fmt.Errorf("cannot find type for %v", prop)
 	}
 }
 

@@ -62,7 +62,7 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{}
 	for name, resource := range p.generator.api.Resources {
-		resources = append(resources, NewExampleResourceWithResource(resource, p.generator.api, name))
+		resources = append(resources, NewExampleResourceWithResource(resource, p.generator.api, name, p.generator.openapi))
 	}
 	return resources
 }

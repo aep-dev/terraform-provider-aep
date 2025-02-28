@@ -9,6 +9,7 @@ import (
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/client"
+	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -20,12 +21,13 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
 			resource: r,
 			api:      a,
 			name:     n,
+			o:        o,
 		}
 	}
 }
@@ -42,6 +44,7 @@ type ExampleResource struct {
 
 	// Client will be configured at plan/apply time in the Configure() function.
 	client *client.Client
+	o      *openapi.OpenAPI
 }
 
 func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -49,7 +52,7 @@ func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	attr, err := FullSchema(r.resource)
+	attr, err := FullSchema(ctx, r.resource, r.o)
 	if err != nil {
 		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create additional attributes for resource %s, got error: %s", r.name, err))
 		return
@@ -98,7 +101,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	body, err := Body(dataPlan, r.resource)
+	body, err := Body(ctx, dataPlan, r.resource, r.o)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create body, got error: %s", err))
 		return
@@ -111,7 +114,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	dataState, err := State(a, dataPlan, r.resource)
+	dataState, err := State(ctx, a, dataPlan, r.resource, r.o)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Create: unable to create state, got error: %s", err))
 		return
@@ -154,7 +157,7 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	dataState, err := State(a, dataResource, r.resource)
+	dataState, err := State(ctx, a, dataResource, r.resource, r.o)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Read: unable to create state, got error: %s", err))
 		return
@@ -177,7 +180,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	body, err := Body(dataResource, r.resource)
+	body, err := Body(ctx, dataResource, r.resource, r.o)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to body, got error: %s", err))
 		return
@@ -208,7 +211,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	tflog.Info(ctx, fmt.Sprintf("Create response: %v", a))
 
-	toBeState, err := State(a, dataResource, r.resource)
+	toBeState, err := State(ctx, a, dataResource, r.resource, r.o)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Update: unable to create state, got error: %s", err))
 		return

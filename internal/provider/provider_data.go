@@ -8,8 +8,9 @@ import (
 )
 
 type GeneratedProviderData struct {
-	client *http.Client
-	api    *api.API
+	client  *http.Client
+	api     *api.API
+	openapi *openapi.OpenAPI
 }
 
 func CreateGeneratedProviderData(path string, pathPrefix string) (*GeneratedProviderData, error) {
@@ -24,7 +25,8 @@ func CreateGeneratedProviderData(path string, pathPrefix string) (*GeneratedProv
 	}
 
 	return &GeneratedProviderData{
-		client: http.DefaultClient,
-		api:    a,
+		client:  http.DefaultClient,
+		api:     a,
+		openapi: oas,
 	}, nil
 }

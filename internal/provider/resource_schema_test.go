@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"testing"
 
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
@@ -116,7 +117,7 @@ func TestSchemaAttributes(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := SchemaAttributes(tt.schema)
+			got, err := SchemaAttributes(context.TODO(), tt.schema, &openapi.OpenAPI{})
 			if err != nil {
 				t.Errorf("SchemaAttributes() error = %v", err)
 				return
@@ -168,7 +169,7 @@ func TestSchemaAttribute(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := schemaAttribute(tt.prop, tt.name, tt.required)
+			got, err := schemaAttribute(context.TODO(), tt.prop, tt.name, tt.required, &openapi.OpenAPI{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("schemaAttribute() error = %v, wantErr %v", err, tt.wantErr)
 				return
