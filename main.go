@@ -11,6 +11,7 @@ import (
 
 	"github.com/aep-dev/aep-lib-go/pkg/client"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider"
 )
 
@@ -18,8 +19,8 @@ var (
 	// these will be set by the goreleaser configuration
 	// to appropriate values for the compiled binary.
 	version    string = "dev"
-	path       string = "http://localhost:8081/openapi.json"
-	pathPrefix string = ""
+	path       string = "https://raw.githubusercontent.com/Roblox/creator-docs/refs/heads/main/content/en-us/reference/cloud/cloud.docs.json"
+	pathPrefix string = "/cloud/v2"
 
 	// goreleaser can pass other information to the main package, such as the specific commit
 	// https://goreleaser.com/cookbooks/using-main.version/
@@ -39,12 +40,16 @@ func main() {
 		Debug:   debug,
 	}
 
-	gen, err := provider.CreateGeneratedProviderData(path, pathPrefix)
+	gen, err := provider.CreateGeneratedProviderData(context.Background(), path, pathPrefix)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	c := client.NewClient(http.DefaultClient)
+
+	c.LoggingFunction = func(ctx context.Context, message string, args ...any) {
+		tflog.Info(ctx, message)
+	}
 
 	err = providerserver.Serve(context.Background(), provider.New(version, gen, c, provider.NewProviderConfig()), opts)
 

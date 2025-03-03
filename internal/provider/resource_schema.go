@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -14,66 +15,126 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// The full schema - includes all fields from body + parameters for parents.
-func FullSchema(r *api.Resource) (map[string]tfschema.Attribute, error) {
-	attributes, err := SchemaAttributes(*r.Schema)
+type ResourceSchema struct {
+	Resource   *api.Resource
+	Attributes map[string]*ResourceAttribute
+}
+
+type TypeEnum string
+
+const (
+	STRING  TypeEnum = "string"
+	NUMBER  TypeEnum = "number"
+	BOOLEAN TypeEnum = "boolean"
+	INTEGER TypeEnum = "integer"
+	OBJECT  TypeEnum = "object"
+	ARRAY   TypeEnum = "array"
+)
+
+type ResourceAttribute struct {
+	// The name of the attribute from Terraform's perspective.
+	TerraformName string
+	// The name of the attribute that should be sent across the wire.
+	JSONName string
+	// If true, this attribute is not sent across the wire.
+	Parameter bool
+	// The type of this resource attribute.
+	Type TypeEnum
+	// The attribute information for
+	Attribute tfschema.Attribute
+	// The nested attributes if the type is object.
+	// This is most important to gather ResourceAttribute information for other types.
+	NestedAttributes map[string]*ResourceAttribute
+}
+
+func (r *ResourceSchema) FullSchema() map[string]tfschema.Attribute {
+	schema := make(map[string]tfschema.Attribute)
+	for _, attr := range r.Attributes {
+		schema[attr.TerraformName] = attr.Attribute
+	}
+	return schema
+}
+
+func (r *ResourceSchema) Parameters() map[string]tfschema.Attribute {
+	parameters := make(map[string]tfschema.Attribute)
+	for _, attr := range r.Attributes {
+		if attr.Parameter {
+			parameters[attr.TerraformName] = attr.Attribute
+		}
+	}
+	return parameters
+}
+
+func (r *ResourceSchema) SchemaAttributes() map[string]tfschema.Attribute {
+	schemaAttributes := make(map[string]tfschema.Attribute)
+	for _, attr := range r.Attributes {
+		if !attr.Parameter {
+			schemaAttributes[attr.TerraformName] = attr.Attribute
+		}
+	}
+	return schemaAttributes
+}
+
+func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI) (*ResourceSchema, error) {
+	schema := &ResourceSchema{
+		Resource:   r,
+		Attributes: make(map[string]*ResourceAttribute),
+	}
+
+	// Add all normal schema attributes.
+	a, err := schemaAttributes(ctx, r.Schema, o)
 	if err != nil {
 		return nil, err
 	}
-
-	parameterAttributes, err := ParameterAttributes(r)
-	if err != nil {
-		return nil, err
+	for _, attr := range a {
+		schema.Attributes[attr.TerraformName] = attr
 	}
 
-	for name, attribute := range parameterAttributes {
-		attributes[name] = attribute
-	}
-
-	return attributes, nil
-
-}
-
-func SchemaAttributes(schema openapi.Schema) (map[string]tfschema.Attribute, error) {
-	return SchemaAttributes_helper(schema, true)
-}
-
-func SchemaAttributes_helper(schema openapi.Schema, addId bool) (map[string]tfschema.Attribute, error) {
-	m := make(map[string]tfschema.Attribute)
-	for name, prop := range schema.Properties {
-		a, err := schemaAttribute(prop, name, schema.Required)
-		if err != nil {
-			return nil, err
-		}
-		m[ToSnakeCase(name)] = a
-	}
-
-	if addId {
-		m["id"] = tfschema.StringAttribute{
-			Computed: true,
+	// Add all parameters.
+	if len(r.PatternElems) > 0 {
+		for _, elem := range r.PatternElems[:len(r.PatternElems)-1] {
+			if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
+				paramName := strings.Replace(elem[1:len(elem)-1], "-", "_", -1)
+				schema.Attributes[paramName] = &ResourceAttribute{
+					TerraformName: paramName,
+					JSONName:      paramName,
+					Parameter:     true,
+					Attribute: tfschema.StringAttribute{
+						MarkdownDescription: paramName,
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+				}
+			}
 		}
 	}
-	return m, nil
-}
 
-// Attributes coming from parents.
-func ParameterAttributes(r *api.Resource) (map[string]tfschema.Attribute, error) {
-	m := make(map[string]tfschema.Attribute)
-
-	// Do not go through last element, since that's the resource itself.
-	for _, elem := range r.PatternElems[:len(r.PatternElems)-1] {
-		if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
-			paramName := strings.Replace(elem[1:len(elem)-1], "-", "_", -1)
-			m[paramName] = tfschema.StringAttribute{
-				MarkdownDescription: paramName,
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+	if _, ok := schema.Attributes["id"]; !ok {
+		if r.CreateMethod != nil && r.CreateMethod.SupportsUserSettableCreate {
+			schema.Attributes["id"] = &ResourceAttribute{
+				TerraformName: "id",
+				JSONName:      "id",
+				Parameter:     false,
+				Attribute: tfschema.StringAttribute{
+					Optional:            true,
+					MarkdownDescription: "The id of the resource.",
+				},
+			}
+		} else {
+			schema.Attributes["id"] = &ResourceAttribute{
+				TerraformName: "id",
+				JSONName:      "id",
+				Parameter:     true,
+				Attribute: tfschema.StringAttribute{
+					Computed:            true,
+					MarkdownDescription: "The id of the resource.",
 				},
 			}
 		}
 	}
-	return m, nil
+	return schema, nil
 }
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
@@ -85,84 +146,144 @@ func ToSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-func schemaAttribute(prop openapi.Schema, name string, requiredProps []string) (tfschema.Attribute, error) {
+func schemaAttributes(ctx context.Context, s *openapi.Schema, o *openapi.OpenAPI) (map[string]*ResourceAttribute, error) {
+	m := make(map[string]*ResourceAttribute)
+	// Add all normal properties.
+	for name, prop := range s.Properties {
+		a, err := schemaAttribute(ctx, &prop, name, s.Required, o)
+		if err != nil {
+			return nil, err
+		} else if a != nil {
+			m[name] = a
+		}
+	}
+	return m, nil
+}
+
+func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, requiredProps []string, o *openapi.OpenAPI) (*ResourceAttribute, error) {
+	m := &ResourceAttribute{
+		TerraformName: strings.Replace(ToSnakeCase(name), "@", "", -1),
+		JSONName:      name,
+		Parameter:     false,
+	}
 	required := checkIfRequired(requiredProps, name)
-	switch prop.Type {
-	case "number":
-		return tfschema.NumberAttribute{
+
+	if name == "etag" {
+		return nil, nil
+	}
+
+	// GoogleProtobufValue is a type based on its name.
+	// It's just a string that stands in for arbitrary JSON.
+	if prop.Ref == "#/components/schemas/GoogleProtobufValue" {
+		m.Attribute = tfschema.StringAttribute{
 			MarkdownDescription: prop.Description,
 			Computed:            prop.ReadOnly,
 			Required:            required,
 			Optional:            !required,
-		}, nil
-	case "string":
-		return tfschema.StringAttribute{
-			MarkdownDescription: prop.Description,
-			Computed:            prop.ReadOnly,
-			Optional:            !required,
-			Required:            required,
-		}, nil
-	case "boolean":
-		return tfschema.BoolAttribute{
-			MarkdownDescription: prop.Description,
-			Computed:            prop.ReadOnly,
-			Required:            required,
-			Optional:            !required,
-		}, nil
-	case "integer":
-		return tfschema.Int64Attribute{
-			MarkdownDescription: prop.Description,
-			Computed:            prop.ReadOnly,
-			Required:            required,
-			Optional:            !required,
-		}, nil
-	case "object":
-		no, err := SchemaAttributes_helper(prop, false)
+		}
+		return m, nil
+	}
+
+	if prop.Ref != "" {
+		s, err := o.DereferenceSchema(*prop)
 		if err != nil {
 			return nil, err
 		}
-		return tfschema.SingleNestedAttribute{
-			Attributes:          no,
+		if s == nil {
+			return nil, fmt.Errorf("ref not found for %s", prop.Ref)
+		}
+		return schemaAttribute(ctx, s, name, requiredProps, o)
+	}
+
+	computed := prop.ReadOnly
+
+	// The path field should always be treated as computed.
+	// If the ID is settable, the ID field will be used.
+	// If ID is not settable, path should be computed regardless.
+	if name == "path" {
+		computed = true
+	}
+
+	switch prop.Type {
+	case "number":
+		m.Attribute = tfschema.NumberAttribute{
 			MarkdownDescription: prop.Description,
-			Computed:            prop.ReadOnly,
+			Computed:            computed,
 			Required:            required,
 			Optional:            !required,
-		}, nil
+		}
+	case "string":
+		m.Attribute = tfschema.StringAttribute{
+			MarkdownDescription: prop.Description,
+			Computed:            computed,
+			Optional:            !required,
+			Required:            required,
+		}
+	case "boolean":
+		m.Attribute = tfschema.BoolAttribute{
+			MarkdownDescription: prop.Description,
+			Computed:            computed,
+			Required:            required,
+			Optional:            !required,
+		}
+	case "integer":
+		m.Attribute = tfschema.Int64Attribute{
+			MarkdownDescription: prop.Description,
+			Computed:            computed,
+			Required:            required,
+			Optional:            !required,
+		}
+	case "object":
+		no, err := schemaAttributes(ctx, prop, o)
+		if err != nil {
+			return nil, err
+		}
+		m.Attribute = tfschema.SingleNestedAttribute{
+			Attributes:          convertToMap(no),
+			MarkdownDescription: prop.Description,
+			Computed:            computed,
+			Required:            required,
+			Optional:            !required,
+		}
+		m.NestedAttributes = no
 	case "array":
 		if prop.Items.Type == "object" {
-			no, err := SchemaAttributes_helper(*prop.Items, false)
+			no, err := schemaAttributes(ctx, prop.Items, o)
 			if err != nil {
 				return nil, err
 			}
-			return tfschema.ListNestedAttribute{
+			m.Attribute = tfschema.ListNestedAttribute{
 				NestedObject: tfschema.NestedAttributeObject{
-					Attributes: no,
+					Attributes: convertToMap(no),
 				},
 				MarkdownDescription: prop.Description,
-				Computed:            prop.ReadOnly,
+				Computed:            computed,
 				Required:            required,
 				Optional:            !required,
-			}, nil
+			}
+			m.NestedAttributes = no
 		} else {
 			lt, err := listType(prop)
 			if err != nil {
 				return nil, err
 			}
 
-			return tfschema.ListAttribute{
+			m.Attribute = tfschema.ListAttribute{
 				ElementType:         lt,
 				MarkdownDescription: prop.Description,
-				Computed:            prop.ReadOnly,
+				Computed:            computed,
 				Required:            required,
 				Optional:            !required,
-			}, nil
+			}
 		}
 	default:
-		return nil, fmt.Errorf("cannot find type for %s", prop.Type)
+		return nil, fmt.Errorf("cannot find type for %v", prop)
 	}
+
+	return m, nil
 }
 
-func listType(prop openapi.Schema) (attr.Type, error) {
+func listType(prop *openapi.Schema) (attr.Type, error) {
 	switch prop.Items.Type {
 	case "number":
 		return types.NumberType, nil
@@ -185,4 +306,12 @@ func checkIfRequired(requiredProps []string, propName string) bool {
 		}
 	}
 	return false
+}
+
+func convertToMap(l map[string]*ResourceAttribute) map[string]tfschema.Attribute {
+	attributeMap := make(map[string]tfschema.Attribute)
+	for _, attribute := range l {
+		attributeMap[attribute.TerraformName] = attribute.Attribute
+	}
+	return attributeMap
 }

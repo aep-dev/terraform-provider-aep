@@ -1,8 +1,10 @@
 package provider
 
 import (
+	"context"
 	"testing"
 
+	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -13,7 +15,7 @@ import (
 func TestSchemaAttributes(t *testing.T) {
 	tests := map[string]struct {
 		schema openapi.Schema
-		want   map[string]tfschema.Attribute
+		want   *ResourceSchema
 	}{
 		"simple": {
 			schema: openapi.Schema{
@@ -28,13 +30,26 @@ func TestSchemaAttributes(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]tfschema.Attribute{
-				"foo": tfschema.StringAttribute{
-					MarkdownDescription: "foo description",
-					Optional:            true,
-				},
-				"id": tfschema.StringAttribute{
-					Computed: true,
+			want: &ResourceSchema{
+				Attributes: map[string]*ResourceAttribute{
+					"foo": {
+						TerraformName: "foo",
+						JSONName:      "foo",
+						Parameter:     false,
+						Attribute: tfschema.StringAttribute{
+							MarkdownDescription: "foo description",
+							Optional:            true,
+						},
+					},
+					"id": {
+						TerraformName: "id",
+						JSONName:      "id",
+						Parameter:     false,
+						Attribute: tfschema.StringAttribute{
+							Optional:            true,
+							MarkdownDescription: "The id of the resource",
+						},
+					},
 				},
 			},
 		},
@@ -48,13 +63,26 @@ func TestSchemaAttributes(t *testing.T) {
 				},
 				Required: []string{"foo"},
 			},
-			want: map[string]tfschema.Attribute{
-				"foo": tfschema.StringAttribute{
-					MarkdownDescription: "foo description",
-					Required:            true,
-				},
-				"id": tfschema.StringAttribute{
-					Computed: true,
+			want: &ResourceSchema{
+				Attributes: map[string]*ResourceAttribute{
+					"foo": {
+						TerraformName: "foo",
+						JSONName:      "foo",
+						Parameter:     false,
+						Attribute: tfschema.StringAttribute{
+							MarkdownDescription: "foo description",
+							Required:            true,
+						},
+					},
+					"id": {
+						TerraformName: "id",
+						JSONName:      "id",
+						Parameter:     true,
+						Attribute: tfschema.StringAttribute{
+							Computed:            true,
+							MarkdownDescription: "The id of the resource.",
+						},
+					},
 				},
 			},
 		},
@@ -73,20 +101,43 @@ func TestSchemaAttributes(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]tfschema.Attribute{
-				"foo": tfschema.SingleNestedAttribute{
-					Attributes: map[string]tfschema.Attribute{
-						"bar": tfschema.StringAttribute{
-							MarkdownDescription: "bar description",
-							Required:            true,
-							Optional:            false,
+			want: &ResourceSchema{
+				Attributes: map[string]*ResourceAttribute{
+					"foo": {
+						TerraformName: "foo",
+						JSONName:      "foo",
+						Parameter:     false,
+						Attribute: tfschema.SingleNestedAttribute{
+							Attributes: map[string]tfschema.Attribute{
+								"bar": tfschema.StringAttribute{
+									MarkdownDescription: "bar description",
+									Required:            true,
+									Optional:            false,
+								},
+							},
+							MarkdownDescription: "",
+							Optional:            true,
+						},
+						NestedAttributes: map[string]*ResourceAttribute{
+							"bar": {
+								TerraformName: "bar",
+								JSONName:      "bar",
+								Attribute: tfschema.StringAttribute{
+									Required:            true,
+									MarkdownDescription: "bar description",
+								},
+							},
 						},
 					},
-					MarkdownDescription: "",
-					Optional:            true,
-				},
-				"id": tfschema.StringAttribute{
-					Computed: true,
+					"id": {
+						TerraformName: "id",
+						JSONName:      "id",
+						Parameter:     true,
+						Attribute: tfschema.StringAttribute{
+							Computed:            true,
+							MarkdownDescription: "The id of the resource.",
+						},
+					},
 				},
 			},
 		},
@@ -101,14 +152,27 @@ func TestSchemaAttributes(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]tfschema.Attribute{
-				"foo": tfschema.ListAttribute{
-					ElementType:         types.StringType,
-					MarkdownDescription: "",
-					Optional:            true,
-				},
-				"id": tfschema.StringAttribute{
-					Computed: true,
+			want: &ResourceSchema{
+				Attributes: map[string]*ResourceAttribute{
+					"foo": {
+						TerraformName: "foo",
+						JSONName:      "foo",
+						Parameter:     false,
+						Attribute: tfschema.ListAttribute{
+							ElementType:         types.StringType,
+							MarkdownDescription: "",
+							Optional:            true,
+						},
+					},
+					"id": {
+						TerraformName: "id",
+						JSONName:      "id",
+						Parameter:     true,
+						Attribute: tfschema.StringAttribute{
+							Computed:            true,
+							MarkdownDescription: "The id of the resource.",
+						},
+					},
 				},
 			},
 		},
@@ -116,65 +180,13 @@ func TestSchemaAttributes(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := SchemaAttributes(tt.schema)
+			got, err := NewResourceSchema(context.TODO(), &api.Resource{Schema: &tt.schema, PatternElems: make([]string, 0)}, &openapi.OpenAPI{})
 			if err != nil {
 				t.Errorf("SchemaAttributes() error = %v", err)
 				return
 			}
-			if d := cmp.Diff(got, tt.want); d != "" {
+			if d := cmp.Diff(got.Attributes, tt.want.Attributes); d != "" {
 				t.Errorf("SchemaAttributes() diff: %s", d)
-			}
-		})
-	}
-}
-
-func TestSchemaAttribute(t *testing.T) {
-	tests := map[string]struct {
-		prop     openapi.Schema
-		name     string
-		required []string
-		want     tfschema.Attribute
-		wantErr  bool
-	}{
-		"string": {
-			prop: openapi.Schema{
-				Type: "string",
-			},
-			name: "foo",
-			want: tfschema.StringAttribute{
-				MarkdownDescription: "",
-				Optional:            true,
-			},
-		},
-		"required": {
-			prop: openapi.Schema{
-				Type: "string",
-			},
-			name:     "foo",
-			required: []string{"foo"},
-			want: tfschema.StringAttribute{
-				MarkdownDescription: "",
-				Required:            true,
-			},
-		},
-		"unknown": {
-			prop: openapi.Schema{
-				Type: "unknown",
-			},
-			name:    "foo",
-			wantErr: true,
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			got, err := schemaAttribute(tt.prop, tt.name, tt.required)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("schemaAttribute() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if diff := cmp.Diff(got, tt.want); diff != "" {
-				t.Errorf("schemaAttribute() mismatch (-got +want):\n%s", diff)
 			}
 		})
 	}
@@ -206,7 +218,7 @@ func TestListType(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := listType(tt.prop)
+			got, err := listType(&tt.prop)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("listType() error = %v, wantErr %v", err, tt.wantErr)
 				return

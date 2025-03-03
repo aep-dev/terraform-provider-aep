@@ -9,6 +9,7 @@ import (
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/client"
+	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -20,12 +21,14 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI, res *ResourceSchema) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
-			resource: r,
-			api:      a,
-			name:     n,
+			resource:       r,
+			api:            a,
+			name:           n,
+			o:              o,
+			resourceSchema: res,
 		}
 	}
 }
@@ -41,7 +44,9 @@ type ExampleResource struct {
 	name     string
 
 	// Client will be configured at plan/apply time in the Configure() function.
-	client *client.Client
+	client         *client.Client
+	o              *openapi.OpenAPI
+	resourceSchema *ResourceSchema
 }
 
 func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -49,11 +54,7 @@ func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	attr, err := FullSchema(r.resource)
-	if err != nil {
-		resp.Diagnostics.AddError("Schema error", fmt.Sprintf("Unable to create additional attributes for resource %s, got error: %s", r.name, err))
-		return
-	}
+	attr := r.resourceSchema.FullSchema()
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: r.resource.Singular,
@@ -92,17 +93,18 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	parameters, err := Parameters(ctx, dataPlan, r.resource)
+	parameters, err := Parameters(ctx, dataPlan, r.resourceSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create parameters, got error: %s", err))
 		return
 	}
 
-	body, err := Body(dataPlan, r.resource)
+	body, err := Body(ctx, dataPlan, r.resourceSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create body, got error: %s", err))
 		return
 	}
+	tflog.Info(ctx, fmt.Sprintf("headers %q", r.client.Headers))
 
 	a, err := r.client.Create(ctx, r.resource, r.api.ServerURL, body, parameters)
 
@@ -111,7 +113,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	dataState, err := State(a, dataPlan, r.resource)
+	dataState, err := State(ctx, a, dataPlan, r.resourceSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Create: unable to create state, got error: %s", err))
 		return
@@ -154,7 +156,7 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	dataState, err := State(a, dataResource, r.resource)
+	dataState, err := State(ctx, a, dataResource, r.resourceSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Read: unable to create state, got error: %s", err))
 		return
@@ -177,7 +179,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	body, err := Body(dataResource, r.resource)
+	body, err := Body(ctx, dataResource, r.resourceSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to body, got error: %s", err))
 		return
@@ -208,7 +210,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	tflog.Info(ctx, fmt.Sprintf("Create response: %v", a))
 
-	toBeState, err := State(a, dataResource, r.resource)
+	toBeState, err := State(ctx, a, dataResource, r.resourceSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Update: unable to create state, got error: %s", err))
 		return
