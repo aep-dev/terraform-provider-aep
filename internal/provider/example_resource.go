@@ -21,13 +21,14 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI, res *ResourceSchema) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
-			resource: r,
-			api:      a,
-			name:     n,
-			o:        o,
+			resource:       r,
+			api:            a,
+			name:           n,
+			o:              o,
+			resourceSchema: res,
 		}
 	}
 }
