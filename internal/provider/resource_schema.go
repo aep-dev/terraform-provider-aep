@@ -17,7 +17,7 @@ import (
 
 type ResourceSchema struct {
 	Resource   *api.Resource
-	Attributes []*ResourceAttribute
+	Attributes map[string]*ResourceAttribute
 }
 
 type TypeEnum string
@@ -44,7 +44,7 @@ type ResourceAttribute struct {
 	Attribute tfschema.Attribute
 	// The nested attributes if the type is object.
 	// This is most important to gather ResourceAttribute information for other types.
-	NestedAttributes []*ResourceAttribute
+	NestedAttributes map[string]*ResourceAttribute
 }
 
 func (r *ResourceSchema) FullSchema() map[string]tfschema.Attribute {
@@ -78,7 +78,7 @@ func (r *ResourceSchema) SchemaAttributes() map[string]tfschema.Attribute {
 func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI) (*ResourceSchema, error) {
 	schema := &ResourceSchema{
 		Resource:   r,
-		Attributes: make([]*ResourceAttribute, 0),
+		Attributes: make(map[string]*ResourceAttribute),
 	}
 
 	// Add all normal schema attributes.
@@ -86,14 +86,16 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 	if err != nil {
 		return nil, err
 	}
-	schema.Attributes = a
+	for _, attr := range a {
+		schema.Attributes[attr.TerraformName] = attr
+	}
 
 	// Add all parameters.
-	for _, elem := range r.PatternElems[:len(r.PatternElems)-1] {
-		if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
-			paramName := strings.Replace(elem[1:len(elem)-1], "-", "_", -1)
-			schema.Attributes = append(schema.Attributes,
-				&ResourceAttribute{
+	if len(r.PatternElems) > 0 {
+		for _, elem := range r.PatternElems[:len(r.PatternElems)-1] {
+			if strings.HasPrefix(elem, "{") && strings.HasSuffix(elem, "}") {
+				paramName := strings.Replace(elem[1:len(elem)-1], "-", "_", -1)
+				schema.Attributes[paramName] = &ResourceAttribute{
 					TerraformName: paramName,
 					JSONName:      paramName,
 					Parameter:     true,
@@ -104,30 +106,33 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
-				})
+				}
+			}
 		}
 	}
 
-	if r.CreateMethod != nil && r.CreateMethod.SupportsUserSettableCreate {
-		schema.Attributes = append(schema.Attributes, &ResourceAttribute{
-			TerraformName: "id",
-			JSONName:      "id",
-			Parameter:     false,
-			Attribute: tfschema.StringAttribute{
-				Optional:    true,
-				Description: "The id of the resource.",
-			},
-		})
-	} else {
-		schema.Attributes = append(schema.Attributes, &ResourceAttribute{
-			TerraformName: "id",
-			JSONName:      "id",
-			Parameter:     true,
-			Attribute: tfschema.StringAttribute{
-				Computed:    true,
-				Description: "The id of the resource.",
-			},
-		})
+	if _, ok := schema.Attributes["id"]; !ok {
+		if r.CreateMethod != nil && r.CreateMethod.SupportsUserSettableCreate {
+			schema.Attributes["id"] = &ResourceAttribute{
+				TerraformName: "id",
+				JSONName:      "id",
+				Parameter:     false,
+				Attribute: tfschema.StringAttribute{
+					Optional:            true,
+					MarkdownDescription: "The id of the resource.",
+				},
+			}
+		} else {
+			schema.Attributes["id"] = &ResourceAttribute{
+				TerraformName: "id",
+				JSONName:      "id",
+				Parameter:     true,
+				Attribute: tfschema.StringAttribute{
+					Computed:            true,
+					MarkdownDescription: "The id of the resource.",
+				},
+			}
+		}
 	}
 	return schema, nil
 }
@@ -141,15 +146,15 @@ func ToSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-func schemaAttributes(ctx context.Context, s *openapi.Schema, o *openapi.OpenAPI) ([]*ResourceAttribute, error) {
-	m := make([]*ResourceAttribute, 0)
+func schemaAttributes(ctx context.Context, s *openapi.Schema, o *openapi.OpenAPI) (map[string]*ResourceAttribute, error) {
+	m := make(map[string]*ResourceAttribute)
 	// Add all normal properties.
 	for name, prop := range s.Properties {
 		a, err := schemaAttribute(ctx, &prop, name, s.Required, o)
 		if err != nil {
 			return nil, err
 		} else if a != nil {
-			m = append(m, a)
+			m[name] = a
 		}
 	}
 	return m, nil
@@ -303,7 +308,7 @@ func checkIfRequired(requiredProps []string, propName string) bool {
 	return false
 }
 
-func convertToMap(l []*ResourceAttribute) map[string]tfschema.Attribute {
+func convertToMap(l map[string]*ResourceAttribute) map[string]tfschema.Attribute {
 	attributeMap := make(map[string]tfschema.Attribute)
 	for _, attribute := range l {
 		attributeMap[attribute.TerraformName] = attribute.Attribute
