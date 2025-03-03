@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
@@ -34,7 +35,9 @@ type ScaffoldingProvider struct {
 }
 
 // ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct{}
+type ScaffoldingProviderModel struct {
+	Headers map[string]string `tfsdk:"headers"`
+}
 
 func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "scaffolding"
@@ -42,7 +45,15 @@ func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.Metadat
 }
 
 func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
-	resp.Schema = schema.Schema{}
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"headers": schema.MapAttribute{
+				Description: "A map of headers that will be sent across the wire.",
+				Optional:    true,
+				ElementType: types.StringType,
+			},
+		},
+	}
 }
 
 func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -52,6 +63,10 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	for k, v := range data.Headers {
+		p.client.Headers[k] = v
 	}
 
 	// Example client configuration for data sources and resources

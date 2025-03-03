@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -117,7 +118,7 @@ func TestSchemaAttributes(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := SchemaAttributes(context.TODO(), tt.schema, &openapi.OpenAPI{})
+			got, err := NewResourceSchema(context.TODO(), &api.Resource{Schema: &tt.schema}, &openapi.OpenAPI{})
 			if err != nil {
 				t.Errorf("SchemaAttributes() error = %v", err)
 				return
@@ -169,7 +170,7 @@ func TestSchemaAttribute(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := schemaAttribute(context.TODO(), tt.prop, tt.name, tt.required, &openapi.OpenAPI{})
+			got, err := schemaAttributes(context.TODO(), &tt.prop, &openapi.OpenAPI{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("schemaAttribute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -207,7 +208,7 @@ func TestListType(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := listType(tt.prop)
+			got, err := listType(&tt.prop)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("listType() error = %v, wantErr %v", err, tt.wantErr)
 				return

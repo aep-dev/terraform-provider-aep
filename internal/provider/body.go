@@ -4,23 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aep-dev/aep-lib-go/pkg/api"
-	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
 )
 
 // Returns the proper formatted body for Create / Update requests.
-func Body(ctx context.Context, d *data.Resource, r *api.Resource, o *openapi.OpenAPI) (map[string]interface{}, error) {
+func Body(ctx context.Context, d *data.Resource, r *ResourceSchema) (map[string]interface{}, error) {
 	jsonDataMap, err := d.ToJSON()
 	if err != nil {
 		return nil, err
 	}
 
-	attributes, err := SchemaAttributes(ctx, *r.Schema, o)
-	if err != nil {
-		return nil, err
-	}
+	attributes := r.SchemaAttributes()
 
 	result := make(map[string]interface{})
 	for key, value := range jsonDataMap {
@@ -32,16 +27,13 @@ func Body(ctx context.Context, d *data.Resource, r *api.Resource, o *openapi.Ope
 }
 
 // Returns a map that can be used to substitute parent values into a URI.
-func Parameters(ctx context.Context, d *data.Resource, r *api.Resource) (map[string]string, error) {
+func Parameters(ctx context.Context, d *data.Resource, r *ResourceSchema) (map[string]string, error) {
 	jsonData, err := d.ToJSON()
 	if err != nil {
 		return nil, err
 	}
 
-	parameterAttributes, err := ParameterAttributes(r)
-	if err != nil {
-		return nil, err
-	}
+	parameterAttributes := r.Parameters()
 
 	tflog.Info(ctx, fmt.Sprintf("plan data json: %q", jsonData))
 	result := make(map[string]string)
@@ -59,15 +51,10 @@ func Parameters(ctx context.Context, d *data.Resource, r *api.Resource) (map[str
 }
 
 // Create state from the API response and plan.
-func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource, r *api.Resource, o *openapi.OpenAPI) (*data.Resource, error) {
-	s, err := SchemaAttributes(ctx, *r.Schema, o)
-	if err != nil {
-		return nil, err
-	}
-	p, err := ParameterAttributes(r)
-	if err != nil {
-		return nil, err
-	}
+func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource, r *ResourceSchema) (*data.Resource, error) {
+	s := r.SchemaAttributes()
+
+	p := r.Parameters()
 
 	result := make(map[string]interface{})
 	for k := range s {
@@ -92,7 +79,7 @@ func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource
 	}
 	result["id"] = result["path"]
 
-	err = data.ToResource(result, plan)
+	err := data.ToResource(result, plan)
 	if err != nil {
 		return nil, err
 	}
