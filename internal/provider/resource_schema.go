@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type ResourceSchema struct {
@@ -148,7 +147,7 @@ func schemaAttributes(ctx context.Context, s *openapi.Schema, o *openapi.OpenAPI
 	for name, prop := range s.Properties {
 		a, err := schemaAttribute(ctx, &prop, name, s.Required, o)
 		if err != nil {
-			tflog.Error(ctx, fmt.Sprintf("could not create type for %v with error %s", prop, err))
+			return nil, err
 		} else if a != nil {
 			m = append(m, a)
 		}
