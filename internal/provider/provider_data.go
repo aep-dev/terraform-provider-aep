@@ -33,7 +33,7 @@ func CreateGeneratedProviderData(ctx context.Context, path string, pathPrefix st
 
 	resources := make(map[string]*ResourceSchema)
 	for name, resource := range a.Resources {
-		resSchema, err := NewResourceSchema(context.TODO(), resource, oas)
+		resSchema, err := NewResourceSchema(context.Background(), resource, oas)
 		if err != nil {
 			return nil, err
 		}
