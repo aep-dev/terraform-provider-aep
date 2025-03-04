@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type ResourceSchema struct {
@@ -82,10 +83,7 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 	}
 
 	// Add all normal schema attributes.
-	a, err := schemaAttributes(ctx, r.Schema, o)
-	if err != nil {
-		return nil, err
-	}
+	a := schemaAttributes(ctx, r.Schema, o)
 	for _, attr := range a {
 		schema.Attributes[attr.TerraformName] = attr
 	}
@@ -146,18 +144,18 @@ func ToSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-func schemaAttributes(ctx context.Context, s *openapi.Schema, o *openapi.OpenAPI) (map[string]*ResourceAttribute, error) {
+func schemaAttributes(ctx context.Context, s *openapi.Schema, o *openapi.OpenAPI) map[string]*ResourceAttribute {
 	m := make(map[string]*ResourceAttribute)
 	// Add all normal properties.
 	for name, prop := range s.Properties {
 		a, err := schemaAttribute(ctx, &prop, name, s.Required, o)
 		if err != nil {
-			return nil, err
+			tflog.Error(ctx, fmt.Sprintf("could not create type for %s %v", name, prop))
 		} else if a != nil {
 			m[name] = a
 		}
 	}
-	return m, nil
+	return m
 }
 
 func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, requiredProps []string, o *openapi.OpenAPI) (*ResourceAttribute, error) {
@@ -234,10 +232,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Optional:            !required,
 		}
 	case "object":
-		no, err := schemaAttributes(ctx, prop, o)
-		if err != nil {
-			return nil, err
-		}
+		no := schemaAttributes(ctx, prop, o)
 		m.Attribute = tfschema.SingleNestedAttribute{
 			Attributes:          convertToMap(no),
 			MarkdownDescription: prop.Description,
@@ -248,10 +243,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 		m.NestedAttributes = no
 	case "array":
 		if prop.Items.Type == "object" {
-			no, err := schemaAttributes(ctx, prop.Items, o)
-			if err != nil {
-				return nil, err
-			}
+			no := schemaAttributes(ctx, prop.Items, o)
 			m.Attribute = tfschema.ListNestedAttribute{
 				NestedObject: tfschema.NestedAttributeObject{
 					Attributes: convertToMap(no),
