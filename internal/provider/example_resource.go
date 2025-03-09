@@ -21,7 +21,7 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI, res *ResourceSchema) func() resource.Resource {
+func NewExampleResourceWithResource(r *api.Resource, a *api.API, n string, o *openapi.OpenAPI, res *data.ResourceSchema) func() resource.Resource {
 	return func() resource.Resource {
 		return &ExampleResource{
 			resource:       r,
@@ -46,7 +46,7 @@ type ExampleResource struct {
 	// Client will be configured at plan/apply time in the Configure() function.
 	client         *client.Client
 	o              *openapi.OpenAPI
-	resourceSchema *ResourceSchema
+	resourceSchema *data.ResourceSchema
 }
 
 func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -84,10 +84,11 @@ func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	dataPlan := &data.Resource{}
+	dataPlan := data.NewResource(r.resourceSchema)
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataPlan)...)
+	dataPlan.Schema = r.resourceSchema
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -124,10 +125,11 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	dataResource := &data.Resource{}
+	dataResource := data.NewResource(r.resourceSchema)
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &dataResource)...)
+	dataResource.Schema = r.resourceSchema
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -168,12 +170,15 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 }
 
 func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	dataResource := &data.Resource{}
-	dataState := &data.Resource{}
+	dataResource := data.NewResource(r.resourceSchema)
+	dataState := data.NewResource(r.resourceSchema)
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &dataResource)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &dataState)...)
+
+	dataResource.Schema = r.resourceSchema
+	dataState.Schema = r.resourceSchema
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -222,10 +227,11 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	dataResource := &data.Resource{}
+	dataResource := data.NewResource(r.resourceSchema)
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &dataResource)...)
+	dataResource.Schema = r.resourceSchema
 
 	if resp.Diagnostics.HasError() {
 		return
