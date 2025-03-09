@@ -9,7 +9,7 @@ import (
 )
 
 // Returns the proper formatted body for Create / Update requests.
-func Body(ctx context.Context, d *data.Resource, r *ResourceSchema) (map[string]interface{}, error) {
+func Body(ctx context.Context, d *data.Resource, r *data.ResourceSchema) (map[string]interface{}, error) {
 	jsonDataMap, err := d.ToJSON()
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func Body(ctx context.Context, d *data.Resource, r *ResourceSchema) (map[string]
 }
 
 // Returns a map that can be used to substitute parent values into a URI.
-func Parameters(ctx context.Context, d *data.Resource, r *ResourceSchema) (map[string]string, error) {
+func Parameters(ctx context.Context, d *data.Resource, r *data.ResourceSchema) (map[string]string, error) {
 	jsonData, err := d.ToJSON()
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func Parameters(ctx context.Context, d *data.Resource, r *ResourceSchema) (map[s
 }
 
 // Create state from the API response and plan.
-func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource, r *ResourceSchema) (*data.Resource, error) {
+func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource, r *data.ResourceSchema) (*data.Resource, error) {
 	s := r.SchemaAttributes()
 
 	p := r.Parameters()
@@ -79,7 +79,7 @@ func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource
 	}
 	result["id"] = result["path"]
 
-	err := data.ToResource(result, plan)
+	err := data.FromJSON(result, plan)
 	if err != nil {
 		return nil, err
 	}

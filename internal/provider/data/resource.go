@@ -16,28 +16,20 @@ import (
 var _ tftypes.ValueConverter = &Resource{}
 var _ tftypes.ValueCreator = &Resource{}
 
-// Resource is the data structure that is actually written into our data stores.
-//
-// It currently only publicly contains the Values mapping of attribute names to
-// actual values. It is designed as a bridge between the Terraform SDK
-// representation of a value and a generic JSON representation that can be
-// read/written externally. In theory, any terraform object can be represented
-// as a Resource. In practice, there will probably be edge cases and types that
-// have been missed.
-//
-// If we could write tftypes.Value into a human friendly format, and read back
-// any changes from that then we wouldn't need this bridge. But, we can't do
-// that using the current SDK so we handle it ourselves here.
-//
-// You must call the WithType function manually to attach the object type before
-// attempting to convert a Resource into a Terraform SDK value.
-//
-// The types are attached automatically when converting from a Terraform SDK
-// object.
+// Resource acts as an intermediary data structure between Terraform state and JSON requests / responses.
+// It has methods to convert to/from Terraform state and to/from JSON (map[string]interface{})
+// These conversions happen based on the state in schema.
 type Resource struct {
 	Values map[string]Value `json:"values"`
+	Schema *ResourceSchema
 
 	objectType tftypes.Object
+}
+
+func NewResource(schema *ResourceSchema) *Resource {
+	return &Resource{
+		Schema: schema,
+	}
 }
 
 // GetId returns the ID of the resource.
@@ -97,17 +89,25 @@ func (r *Resource) FromTerraform5Value(value tftypes.Value) error {
 // This function removes the object type keys.
 func (r *Resource) ToJSON() (map[string]interface{}, error) {
 	jsonMap := make(map[string]interface{})
+	if r.Schema == nil {
+		return nil, fmt.Errorf("must set schema on resource")
+	}
+	// r.Values contains Terraform keys.
 	for k, v := range r.Values {
-		convertedValue, err := ConvertValue(v)
+		schemaValue, ok := r.Schema.Attributes[k]
+		if !ok {
+			return nil, fmt.Errorf("could not find %s in Schema", k)
+		}
+		convertedValue, err := ConvertValue(v, schemaValue)
 		if err != nil {
 			return nil, err
 		}
-		jsonMap[k] = convertedValue
+		jsonMap[schemaValue.JSONName] = convertedValue
 	}
 	return jsonMap, nil
 }
 
-func ConvertValue(v Value) (interface{}, error) {
+func ConvertValue(v Value, a *ResourceAttribute) (interface{}, error) {
 	if v.Boolean != nil {
 		return *v.Boolean, nil
 	}
@@ -120,7 +120,7 @@ func ConvertValue(v Value) (interface{}, error) {
 	if v.List != nil {
 		list := make([]interface{}, len(*v.List))
 		for i, item := range *v.List {
-			v2, err := ConvertValue(item)
+			v2, err := ConvertValue(item, a)
 			if err != nil {
 				return nil, err
 			}
@@ -131,7 +131,7 @@ func ConvertValue(v Value) (interface{}, error) {
 	if v.Map != nil {
 		mapJSON := make(map[string]interface{})
 		for key, value := range *v.Map {
-			convertedValue, err := ConvertValue(value)
+			convertedValue, err := ConvertValue(value, a)
 			if err != nil {
 				return nil, err
 			}
@@ -142,7 +142,11 @@ func ConvertValue(v Value) (interface{}, error) {
 	if v.Object != nil {
 		objectJSON := make(map[string]interface{})
 		for key, value := range *v.Object {
-			convertedValue, err := ConvertValue(value)
+			schemaObj, ok := a.NestedAttributes[key]
+			if !ok {
+				return nil, fmt.Errorf("nested object name %s not found", key)
+			}
+			convertedValue, err := ConvertValue(value, schemaObj)
 			if err != nil {
 				return nil, err
 			}
@@ -153,7 +157,7 @@ func ConvertValue(v Value) (interface{}, error) {
 	if v.Set != nil {
 		set := make([]interface{}, len(*v.Set))
 		for i, item := range *v.Set {
-			convertedValue, err := ConvertValue(item)
+			convertedValue, err := ConvertValue(item, a)
 			if err != nil {
 				return nil, err
 			}
@@ -161,10 +165,10 @@ func ConvertValue(v Value) (interface{}, error) {
 		}
 		return set, nil
 	}
-	return nil, fmt.Errorf("unknown type %v", v)
+	return nil, fmt.Errorf("unknown type in ToJSON %v", v)
 }
 
-func ToResource(m map[string]interface{}, r *Resource) error {
+func FromJSON(m map[string]interface{}, r *Resource) error {
 	for k, v := range m {
 		r.Values[k] = ConvertTypeToValue(v)
 	}

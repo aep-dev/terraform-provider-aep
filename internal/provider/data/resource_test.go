@@ -172,9 +172,18 @@ func TestToJSON(t *testing.T) {
 				Values: map[string]Value{
 					"foo": {String: String("bar")},
 				},
+				Schema: &ResourceSchema{
+					Attributes: map[string]*ResourceAttribute{
+						"foo": {
+							TerraformName: "foo",
+							JSONName:      "foo@",
+							Type:          "string",
+						},
+					},
+				},
 			},
 			expected: map[string]interface{}{
-				"foo": "bar",
+				"foo@": "bar",
 			},
 		},
 		{
@@ -184,10 +193,24 @@ func TestToJSON(t *testing.T) {
 					"foo": {String: String("bar")},
 					"baz": {Number: BigFloat(big.NewFloat(123))},
 				},
+				Schema: &ResourceSchema{
+					Attributes: map[string]*ResourceAttribute{
+						"foo": {
+							TerraformName: "foo",
+							JSONName:      "foo@",
+							Type:          "string",
+						},
+						"baz": {
+							TerraformName: "baz",
+							JSONName:      "qux",
+							Type:          "number",
+						},
+					},
+				},
 			},
 			expected: map[string]interface{}{
-				"foo": "bar",
-				"baz": "123",
+				"foo@": "bar",
+				"qux":  "123",
 			},
 		},
 	}
