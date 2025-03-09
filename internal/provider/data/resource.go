@@ -170,34 +170,79 @@ func ConvertValue(v Value, a *ResourceAttribute) (interface{}, error) {
 
 func FromJSON(m map[string]interface{}, r *Resource) error {
 	for k, v := range m {
-		r.Values[k] = ConvertTypeToValue(v)
+		attr := FindAttributeByJSONName(k, r.Schema.Attributes)
+		if attr == nil {
+			return fmt.Errorf("no matching resource attribute found for key %s", k)
+		}
+		convertedValue, err := ConvertTypeToValue(v, attr)
+		if err != nil {
+			return err
+		}
+		r.Values[k] = convertedValue
 	}
 	return nil
 }
 
-func ConvertTypeToValue(v interface{}) Value {
-	switch v := v.(type) {
-	case string:
-		return Value{String: &v}
-	case bool:
-		return Value{Boolean: &v}
-	case int:
-		return Value{Number: big.NewFloat(float64(v))}
-	case float64:
-		return Value{Number: big.NewFloat(v)}
-	case []interface{}:
-		list := make([]Value, len(v))
-		for i, item := range v {
-			list[i] = ConvertTypeToValue(item)
+func ConvertTypeToValue(v interface{}, r *ResourceAttribute) (Value, error) {
+	switch r.Type {
+	case STRING:
+		str, ok := v.(string)
+		if !ok {
+			return Value{}, fmt.Errorf("expected string, got %T", v)
 		}
-		return Value{List: &list}
-	case map[string]interface{}:
-		mapJSON := make(map[string]Value)
-		for key, value := range v {
-			mapJSON[key] = ConvertTypeToValue(value)
+		return Value{String: &str}, nil
+	case BOOLEAN:
+		b, ok := v.(bool)
+		if !ok {
+			return Value{}, fmt.Errorf("expected boolean, got %T", v)
 		}
-		return Value{Object: &mapJSON}
+		return Value{Boolean: &b}, nil
+	case NUMBER:
+		num, ok := v.(float64)
+		if !ok {
+			return Value{}, fmt.Errorf("expected number, got %T", v)
+		}
+		return Value{Number: big.NewFloat(num)}, nil
+	case INTEGER:
+		intNum, ok := v.(int)
+		if !ok {
+			return Value{}, fmt.Errorf("expected integer, got %T", v)
+		}
+		return Value{Number: big.NewFloat(float64(intNum))}, nil
+	case OBJECT:
+		objectJSON := make(map[string]Value)
+		mapValue, ok := v.(map[string]interface{})
+		if !ok {
+			return Value{}, fmt.Errorf("expected map, got %T", v)
+		}
+
+		for key, value := range mapValue {
+			schemaObj := FindAttributeByJSONName(key, r.NestedAttributes)
+			if schemaObj == nil {
+				return Value{}, fmt.Errorf("nested object name %s not found", key)
+			}
+			convertedValue, err := ConvertTypeToValue(value, schemaObj)
+			if err != nil {
+				return Value{}, err
+			}
+			objectJSON[schemaObj.TerraformName] = convertedValue
+		}
+		return Value{Object: &objectJSON}, nil
+	case ARRAY:
+		arrayValue, ok := v.([]interface{})
+		if !ok {
+			return Value{}, fmt.Errorf("expected array, got %T", v)
+		}
+		list := make([]Value, len(arrayValue))
+		for i, item := range arrayValue {
+			convertedValue, err := ConvertTypeToValue(item, &ResourceAttribute{NestedAttributes: r.NestedAttributes, Type: r.ListItemType})
+			if err != nil {
+				return Value{}, err
+			}
+			list[i] = convertedValue
+		}
+		return Value{List: &list}, nil
 	default:
-		return Value{}
+		return Value{}, fmt.Errorf("cannot find type for %v", r)
 	}
 }

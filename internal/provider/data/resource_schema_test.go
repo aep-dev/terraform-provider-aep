@@ -36,6 +36,7 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "foo",
 						JSONName:      "foo",
 						Parameter:     false,
+						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
 							MarkdownDescription: "foo description",
 							Optional:            true,
@@ -45,6 +46,7 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "id",
 						JSONName:      "id",
 						Parameter:     false,
+						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
 							Optional:            true,
 							MarkdownDescription: "The id of the resource",
@@ -69,6 +71,7 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "foo",
 						JSONName:      "foo",
 						Parameter:     false,
+						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
 							MarkdownDescription: "foo description",
 							Required:            true,
@@ -78,6 +81,7 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "id",
 						JSONName:      "id",
 						Parameter:     true,
+						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
 							Computed:            true,
 							MarkdownDescription: "The id of the resource.",
@@ -107,6 +111,7 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "foo",
 						JSONName:      "foo",
 						Parameter:     false,
+						Type:          OBJECT,
 						Attribute: tfschema.SingleNestedAttribute{
 							Attributes: map[string]tfschema.Attribute{
 								"bar": tfschema.StringAttribute{
@@ -122,6 +127,7 @@ func TestSchemaAttributes(t *testing.T) {
 							"bar": {
 								TerraformName: "bar",
 								JSONName:      "bar",
+								Type:          STRING,
 								Attribute: tfschema.StringAttribute{
 									Required:            true,
 									MarkdownDescription: "bar description",
@@ -133,6 +139,7 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "id",
 						JSONName:      "id",
 						Parameter:     true,
+						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
 							Computed:            true,
 							MarkdownDescription: "The id of the resource.",
@@ -158,6 +165,8 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "foo",
 						JSONName:      "foo",
 						Parameter:     false,
+						Type:          ARRAY,
+						ListItemType:  STRING,
 						Attribute: tfschema.ListAttribute{
 							ElementType:         types.StringType,
 							MarkdownDescription: "",
@@ -168,6 +177,7 @@ func TestSchemaAttributes(t *testing.T) {
 						TerraformName: "id",
 						JSONName:      "id",
 						Parameter:     true,
+						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
 							Computed:            true,
 							MarkdownDescription: "The id of the resource.",
