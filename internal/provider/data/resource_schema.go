@@ -17,8 +17,19 @@ import (
 )
 
 type ResourceSchema struct {
-	Resource   *api.Resource
+	Resource *api.Resource
+
+	// Maps Terraform Name -> ResourceAttribute
 	Attributes map[string]*ResourceAttribute
+}
+
+func FindAttributeByJSONName(name string, attributes map[string]*ResourceAttribute) *ResourceAttribute {
+	for _, attr := range attributes {
+		if attr.JSONName == name {
+			return attr
+		}
+	}
+	return nil
 }
 
 type TypeEnum string
@@ -41,6 +52,8 @@ type ResourceAttribute struct {
 	Parameter bool
 	// The type of this resource attribute.
 	Type TypeEnum
+	// Only set for ARRAY types.
+	ListItemType TypeEnum
 	// The attribute information for
 	Attribute tfschema.Attribute
 	// The nested attributes if the type is object.
@@ -97,6 +110,7 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 					TerraformName: paramName,
 					JSONName:      paramName,
 					Parameter:     true,
+					Type:          STRING,
 					Attribute: tfschema.StringAttribute{
 						MarkdownDescription: paramName,
 						Required:            true,
@@ -115,6 +129,7 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 				TerraformName: "id",
 				JSONName:      "id",
 				Parameter:     false,
+				Type:          STRING,
 				Attribute: tfschema.StringAttribute{
 					Optional:            true,
 					MarkdownDescription: "The id of the resource.",
@@ -125,6 +140,7 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 				TerraformName: "id",
 				JSONName:      "id",
 				Parameter:     true,
+				Type:          STRING,
 				Attribute: tfschema.StringAttribute{
 					Computed:            true,
 					MarkdownDescription: "The id of the resource.",
@@ -204,6 +220,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 
 	switch prop.Type {
 	case "number":
+		m.Type = NUMBER
 		m.Attribute = tfschema.NumberAttribute{
 			MarkdownDescription: prop.Description,
 			Computed:            computed,
@@ -211,6 +228,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Optional:            !required,
 		}
 	case "string":
+		m.Type = STRING
 		m.Attribute = tfschema.StringAttribute{
 			MarkdownDescription: prop.Description,
 			Computed:            computed,
@@ -218,6 +236,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Required:            required,
 		}
 	case "boolean":
+		m.Type = BOOLEAN
 		m.Attribute = tfschema.BoolAttribute{
 			MarkdownDescription: prop.Description,
 			Computed:            computed,
@@ -225,6 +244,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Optional:            !required,
 		}
 	case "integer":
+		m.Type = "integer"
 		m.Attribute = tfschema.Int64Attribute{
 			MarkdownDescription: prop.Description,
 			Computed:            computed,
@@ -232,6 +252,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Optional:            !required,
 		}
 	case "object":
+		m.Type = OBJECT
 		no := schemaAttributes(ctx, prop, o)
 		m.Attribute = tfschema.SingleNestedAttribute{
 			Attributes:          convertToMap(no),
@@ -242,7 +263,9 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 		}
 		m.NestedAttributes = no
 	case "array":
+		m.Type = ARRAY
 		if prop.Items.Type == "object" {
+			m.ListItemType = OBJECT
 			no := schemaAttributes(ctx, prop.Items, o)
 			m.Attribute = tfschema.ListNestedAttribute{
 				NestedObject: tfschema.NestedAttributeObject{
@@ -258,6 +281,17 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			lt, err := listType(prop)
 			if err != nil {
 				return nil, err
+			}
+
+			switch lt {
+			case types.NumberType:
+				m.ListItemType = NUMBER
+			case types.StringType:
+				m.ListItemType = STRING
+			case types.BoolType:
+				m.ListItemType = BOOLEAN
+			case types.Int64Type:
+				m.ListItemType = INTEGER
 			}
 
 			m.Attribute = tfschema.ListAttribute{
@@ -288,7 +322,6 @@ func listType(prop *openapi.Schema) (attr.Type, error) {
 	default:
 		return nil, fmt.Errorf("cannot find type for %s", prop.Items.Type)
 	}
-
 }
 
 func checkIfRequired(requiredProps []string, propName string) bool {
