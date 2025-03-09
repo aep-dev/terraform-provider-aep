@@ -211,7 +211,12 @@ func ConvertTypeToValue(v interface{}, r *ResourceAttribute) (Value, error) {
 		return Value{Number: big.NewFloat(float64(intNum))}, nil
 	case OBJECT:
 		objectJSON := make(map[string]Value)
-		for key, value := range v.(map[string]interface{}) {
+		mapValue, ok := v.(map[string]interface{})
+		if !ok {
+			return Value{}, fmt.Errorf("expected map, got %T", v)
+		}
+
+		for key, value := range mapValue {
 			schemaObj := FindAttributeByJSONName(key, r.NestedAttributes)
 			if schemaObj == nil {
 				return Value{}, fmt.Errorf("nested object name %s not found", key)
