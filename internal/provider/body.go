@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
@@ -77,11 +78,59 @@ func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource
 	if !ok {
 		return nil, fmt.Errorf("expected path in response %v", resp)
 	}
-	result["id"] = result["path"]
 
-	err := data.FromJSON(result, plan)
+	pathValue, ok := result["path"].(string)
+	if !ok {
+		return nil, fmt.Errorf("expected path to be a string, got %T", result["path"])
+	}
+
+	// ID is a special field.
+	// For AEP resources, it's (potentially) the field used for setting a ID.
+	// For Terraform, it's the field that's used as a primary key (must be called 'id')
+	// We need to make sure this matches.
+	id, err := setId(plan, resp, pathValue)
+	if err != nil {
+		return nil, err
+	}
+
+	result["id"] = id
+
+	err = data.FromJSON(result, plan)
 	if err != nil {
 		return nil, err
 	}
 	return plan, nil
+}
+
+func setId(plan *data.Resource, resp map[string]interface{}, path string) (string, error) {
+	val, ok := plan.Values["id"]
+	if !ok {
+		return path, nil
+	}
+
+	if val.String == nil {
+		return "", fmt.Errorf("expected id to be a string in state")
+	}
+
+	if *val.String == resp["path"] {
+		// We want the ID to be the path value.
+		return path, nil
+	}
+
+	pathValue, ok := resp["path"]
+	if !ok {
+		return "", fmt.Errorf("expected path to exist in response")
+	}
+
+	respPath, ok := pathValue.(string)
+	if !ok {
+		return "", fmt.Errorf("expected path to be a string, got %T", pathValue)
+	}
+
+	pathParts := strings.Split(respPath, "/")
+	potentialId := pathParts[len(pathParts)-1]
+	if potentialId != *val.String {
+		return "", fmt.Errorf("id from server %s does not match state %s", potentialId, *val.String)
+	}
+	return potentialId, nil
 }
