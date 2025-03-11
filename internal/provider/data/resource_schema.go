@@ -189,6 +189,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 	// GoogleProtobufValue is a type based on its name.
 	// It's just a string that stands in for arbitrary JSON.
 	if prop.Ref == "#/components/schemas/GoogleProtobufValue" {
+		m.Type = STRING
 		m.Attribute = tfschema.StringAttribute{
 			MarkdownDescription: prop.Description,
 			Computed:            prop.ReadOnly,
