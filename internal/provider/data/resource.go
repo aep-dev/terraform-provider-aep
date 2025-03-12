@@ -168,13 +168,17 @@ func ConvertValue(v Value, a *ResourceAttribute) (interface{}, error) {
 	return nil, fmt.Errorf("unknown type in ToJSON %v", v)
 }
 
-func FromJSON(m map[string]interface{}, r *Resource) error {
+func FromJSON(m map[string]interface{}, r *Resource, plan *Resource) error {
 	for k, v := range m {
 		attr := FindAttributeByJSONName(k, r.Schema.Attributes)
 		if attr == nil {
 			return fmt.Errorf("no matching resource attribute found for key %s", k)
 		}
-		convertedValue, err := ConvertTypeToValue(v, attr)
+		val, ok := plan.Values[attr.TerraformName]
+		if !ok {
+			val = Value{}
+		}
+		convertedValue, err := ConvertTypeToValue(v, attr, val)
 		if err != nil {
 			return err
 		}
@@ -183,7 +187,7 @@ func FromJSON(m map[string]interface{}, r *Resource) error {
 	return nil
 }
 
-func ConvertTypeToValue(v interface{}, r *ResourceAttribute) (Value, error) {
+func ConvertTypeToValue(v interface{}, r *ResourceAttribute, planValue Value) (Value, error) {
 	switch r.Type {
 	case STRING:
 		str, ok := v.(string)
@@ -216,12 +220,25 @@ func ConvertTypeToValue(v interface{}, r *ResourceAttribute) (Value, error) {
 			return Value{}, fmt.Errorf("expected map, got %T", v)
 		}
 
+		// Special case:
+		// If the value is unset and the API returns an empty map, we should return unset.
+		// This will make sure that Terraform diff works properly.
+		if planValue.Object == nil && len(mapValue) == 0 {
+			return Value{}, nil
+		}
+
 		for key, value := range mapValue {
 			schemaObj := FindAttributeByJSONName(key, r.NestedAttributes)
 			if schemaObj == nil {
 				return Value{}, fmt.Errorf("nested object name %s not found", key)
 			}
-			convertedValue, err := ConvertTypeToValue(value, schemaObj)
+			val := Value{}
+			if planValue.Object != nil {
+				if _, ok := (*planValue.Object)[schemaObj.TerraformName]; ok {
+					val = (*planValue.Object)[schemaObj.TerraformName]
+				}
+			}
+			convertedValue, err := ConvertTypeToValue(value, schemaObj, val)
 			if err != nil {
 				return Value{}, err
 			}
@@ -235,7 +252,8 @@ func ConvertTypeToValue(v interface{}, r *ResourceAttribute) (Value, error) {
 		}
 		list := make([]Value, len(arrayValue))
 		for i, item := range arrayValue {
-			convertedValue, err := ConvertTypeToValue(item, &ResourceAttribute{NestedAttributes: r.NestedAttributes, Type: r.ListItemType})
+			// TODO: Make the plan fetcher work with arrays.
+			convertedValue, err := ConvertTypeToValue(item, &ResourceAttribute{NestedAttributes: r.NestedAttributes, Type: r.ListItemType}, Value{})
 			if err != nil {
 				return Value{}, err
 			}
