@@ -95,7 +95,8 @@ func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource
 
 	result["id"] = id
 
-	err = data.FromJSON(result, plan)
+	// TODO: This shouldn't take in plan twice.
+	err = data.FromJSON(result, plan, plan)
 	if err != nil {
 		return nil, err
 	}
