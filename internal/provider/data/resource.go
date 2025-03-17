@@ -168,15 +168,19 @@ func ConvertValue(v Value, a *ResourceAttribute) (interface{}, error) {
 	return nil, fmt.Errorf("unknown type in ToJSON %v", v)
 }
 
+// Convert the JSON response to a Resource.
+// Only attributes in the plan are used for this conversion.
+// This function will not attempt to suppress differences between the response + plan, but those differences will result in a provider error.
 func FromJSON(m map[string]interface{}, r *Resource, plan *Resource) error {
-	for k, v := range m {
-		attr := FindAttributeByJSONName(k, r.Schema.Attributes)
-		if attr == nil {
+	for k, val := range plan.Values {
+		// Find matching value in the plan.
+		attr, ok := r.Schema.Attributes[k]
+		if !ok {
 			return fmt.Errorf("no matching resource attribute found for key %s", k)
 		}
-		val, ok := plan.Values[attr.TerraformName]
+		v, ok := m[attr.JSONName]
 		if !ok {
-			val = Value{}
+			return fmt.Errorf("response does not contain key %s", attr.JSONName)
 		}
 		convertedValue, err := ConvertTypeToValue(v, attr, val)
 		if err != nil {
@@ -218,13 +222,6 @@ func ConvertTypeToValue(v interface{}, r *ResourceAttribute, planValue Value) (V
 		mapValue, ok := v.(map[string]interface{})
 		if !ok {
 			return Value{}, fmt.Errorf("expected map, got %T", v)
-		}
-
-		// Special case:
-		// If the value is unset and the API returns an empty map, we should return unset.
-		// This will make sure that Terraform diff works properly.
-		if planValue.Object == nil && len(mapValue) == 0 {
-			return Value{}, nil
 		}
 
 		for key, value := range mapValue {
