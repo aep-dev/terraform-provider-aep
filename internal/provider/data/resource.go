@@ -180,21 +180,23 @@ func ConvertValue(v Value, a *ResourceAttribute) (interface{}, error) {
 // Only attributes in the plan are used for this conversion.
 // This function will not attempt to suppress differences between the response + plan, but those differences will result in a provider error.
 func FromJSON(m map[string]interface{}, r *Resource, plan *Resource) error {
-	for k, val := range plan.Values {
-		// Find matching value in the plan.
-		attr, ok := r.Schema.Attributes[k]
-		if !ok {
-			return fmt.Errorf("no matching resource attribute found for key %s", k)
+	for k, val := range r.Schema.Attributes {
+		planVal, ok := plan.Values[val.JSONName]
+		if ok || val.Computed || val.TerraformName == "id" {
+			attr, ok := r.Schema.Attributes[k]
+			if !ok {
+				return fmt.Errorf("no matching resource attribute found for key %s", k)
+			}
+			v, ok := m[attr.JSONName]
+			if !ok {
+				return fmt.Errorf("response does not contain key %s", attr.JSONName)
+			}
+			convertedValue, err := ConvertTypeToValue(v, attr, planVal)
+			if err != nil {
+				return err
+			}
+			r.Values[k] = convertedValue
 		}
-		v, ok := m[attr.JSONName]
-		if !ok {
-			return fmt.Errorf("response does not contain key %s", attr.JSONName)
-		}
-		convertedValue, err := ConvertTypeToValue(v, attr, val)
-		if err != nil {
-			return err
-		}
-		r.Values[k] = convertedValue
 	}
 	return nil
 }
