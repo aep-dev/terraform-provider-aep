@@ -23,7 +23,7 @@ type Resource struct {
 	Values map[string]Value `json:"values"`
 	Schema *ResourceSchema
 
-	objectType tftypes.Object
+	ObjectType tftypes.Object
 }
 
 func NewResource(schema *ResourceSchema) *Resource {
@@ -47,14 +47,14 @@ func (r Resource) GetId() string {
 // Terraform SDK, so this information should be readily available it just needs
 // to be added after the Resource has been created.
 func (r *Resource) WithType(objectType tftypes.Object) *Resource {
-	r.objectType = objectType
+	r.ObjectType = objectType
 	return r
 }
 
 // ToTerraform5Value ensures that Resource implements the tftypes.ValueCreator
 // interface, and so can be converted into Terraform types easily.
 func (r Resource) ToTerraform5Value() (interface{}, error) {
-	return objectToTerraform5Value(&r.Values, r.objectType)
+	return objectToTerraform5Value(&r.Values, r.ObjectType)
 }
 
 // FromTerraform5Value ensures that Resource implements the
@@ -78,7 +78,7 @@ func (r *Resource) FromTerraform5Value(value tftypes.Value) error {
 	if !ok {
 		return fmt.Errorf("value %v is not a object", value.Type())
 	}
-	r.objectType = v
+	r.ObjectType = v
 	return nil
 }
 

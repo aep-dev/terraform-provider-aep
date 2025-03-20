@@ -36,6 +36,22 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	},
 }
 
+// nolint:unused
+var testAccProtoV6ProviderFactoriesWithRoblox = map[string]func() (tfprotov6.ProviderServer, error){
+	"scaffolding": func() (tfprotov6.ProviderServer, error) {
+		gen, err := CreateGeneratedProviderData(context.TODO(), "https://raw.githubusercontent.com/Roblox/creator-docs/refs/heads/main/content/en-us/reference/cloud/cloud.docs.json", "/cloud/v2")
+		if err != nil {
+			return nil, fmt.Errorf("unable to create generated data %v", err)
+		}
+		mockClient := client.NewClient(&http.Client{})
+		providerConfig := ProviderConfig{
+			OpenAPIPath:    "http://localhost:8081/openapi.json",
+			ProviderPrefix: "scaffolding",
+		}
+		return providerserver.NewProtocol6WithError(New("test", gen, mockClient, providerConfig)())()
+	},
+}
+
 func testAccPreCheck(_ *testing.T) {
 	httpmock.Activate()
 

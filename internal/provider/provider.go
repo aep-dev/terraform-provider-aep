@@ -83,7 +83,11 @@ func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.R
 }
 
 func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	resources := []func() datasource.DataSource{}
+	for name, resource := range p.generator.api.Resources {
+		resources = append(resources, NewDataSourceWithResource(resource, p.generator.api, name, p.generator.openapi, p.generator.resources[name]))
+	}
+	return resources
 }
 
 func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.Function {

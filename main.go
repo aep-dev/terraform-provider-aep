@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -47,9 +48,11 @@ func main() {
 
 	c := client.NewClient(http.DefaultClient)
 
-	c.LoggingFunction = func(ctx context.Context, message string, args ...any) {
-		tflog.Info(ctx, message)
+	c.RequestLoggingFunction = func(ctx context.Context, req *http.Request, args ...any) {
+		tflog.Info(ctx, fmt.Sprintf("Sending %s request to %s", req.Method, req.URL))
 	}
+
+	c.ResponseLoggingFunction = func(ctx context.Context, resp *http.Response, args ...any) {}
 
 	err = providerserver.Serve(context.Background(), provider.New(version, gen, c, provider.NewProviderConfig()), opts)
 

@@ -9,6 +9,7 @@ import (
 	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	dsschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	tfschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -54,8 +55,10 @@ type ResourceAttribute struct {
 	Type TypeEnum
 	// Only set for ARRAY types.
 	ListItemType TypeEnum
-	// The attribute information for
+	// The attribute information for the resource.
 	Attribute tfschema.Attribute
+	// The attribute information for the data source.
+	DatasourceAttribute dsschema.Attribute
 	// The nested attributes if the type is object.
 	// This is most important to gather ResourceAttribute information for other types.
 	NestedAttributes map[string]*ResourceAttribute
@@ -65,6 +68,30 @@ func (r *ResourceSchema) FullSchema() map[string]tfschema.Attribute {
 	schema := make(map[string]tfschema.Attribute)
 	for _, attr := range r.Attributes {
 		schema[attr.TerraformName] = attr.Attribute
+	}
+	return schema
+}
+
+func (r *ResourceSchema) FullCollectionDataSourceSchema(ctx context.Context) map[string]dsschema.Attribute {
+	schema := make(map[string]dsschema.Attribute)
+	for _, attr := range r.Attributes {
+		if attr.Parameter {
+			schema[attr.TerraformName] = attr.DatasourceAttribute
+		}
+	}
+
+	fullResource := make(map[string]dsschema.Attribute)
+	for _, attr := range r.Attributes {
+		fullResource[attr.TerraformName] = attr.DatasourceAttribute
+	}
+
+	// Results are stored here.
+	schema["results"] = dsschema.ListNestedAttribute{
+		MarkdownDescription: fmt.Sprintf("Contains all of the %s resources", r.Resource.Singular),
+		Computed:            true,
+		NestedObject: dsschema.NestedAttributeObject{
+			Attributes: fullResource,
+		},
 	}
 	return schema
 }
@@ -118,6 +145,10 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
+					DatasourceAttribute: dsschema.StringAttribute{
+						MarkdownDescription: paramName,
+						Required:            true,
+					},
 				}
 			}
 		}
@@ -134,6 +165,10 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 					Optional:            true,
 					MarkdownDescription: "The id of the resource.",
 				},
+				DatasourceAttribute: dsschema.StringAttribute{
+					Optional:            true,
+					MarkdownDescription: "The id of the resource.",
+				},
 			}
 		} else {
 			schema.Attributes["id"] = &ResourceAttribute{
@@ -142,6 +177,10 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 				Parameter:     true,
 				Type:          STRING,
 				Attribute: tfschema.StringAttribute{
+					Computed:            true,
+					MarkdownDescription: "The id of the resource.",
+				},
+				DatasourceAttribute: dsschema.StringAttribute{
 					Computed:            true,
 					MarkdownDescription: "The id of the resource.",
 				},
@@ -196,6 +235,10 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Required:            required,
 			Optional:            !required,
 		}
+		m.DatasourceAttribute = dsschema.StringAttribute{
+			MarkdownDescription: prop.Description,
+			Computed:            true,
+		}
 		return m, nil
 	}
 
@@ -228,6 +271,10 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Required:            required,
 			Optional:            !required,
 		}
+		m.DatasourceAttribute = dsschema.NumberAttribute{
+			MarkdownDescription: prop.Description,
+			Computed:            true,
+		}
 	case "string":
 		m.Type = STRING
 		m.Attribute = tfschema.StringAttribute{
@@ -235,6 +282,10 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Computed:            computed,
 			Optional:            !required,
 			Required:            required,
+		}
+		m.DatasourceAttribute = dsschema.StringAttribute{
+			MarkdownDescription: prop.Description,
+			Computed:            true,
 		}
 	case "boolean":
 		m.Type = BOOLEAN
@@ -244,13 +295,21 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Required:            required,
 			Optional:            !required,
 		}
+		m.DatasourceAttribute = dsschema.BoolAttribute{
+			MarkdownDescription: prop.Description,
+			Computed:            true,
+		}
 	case "integer":
-		m.Type = "integer"
+		m.Type = INTEGER
 		m.Attribute = tfschema.Int64Attribute{
 			MarkdownDescription: prop.Description,
 			Computed:            computed,
 			Required:            required,
 			Optional:            !required,
+		}
+		m.DatasourceAttribute = dsschema.Int64Attribute{
+			MarkdownDescription: prop.Description,
+			Computed:            true,
 		}
 	case "object":
 		m.Type = OBJECT
@@ -262,12 +321,18 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Required:            required,
 			Optional:            !required,
 		}
+		m.DatasourceAttribute = dsschema.SingleNestedAttribute{
+			Attributes:          convertToMapForDatasource(no),
+			MarkdownDescription: prop.Description,
+			Computed:            true,
+		}
 		m.NestedAttributes = no
 	case "array":
 		m.Type = ARRAY
 		if prop.Items.Type == "object" {
 			m.ListItemType = OBJECT
 			no := schemaAttributes(ctx, prop.Items, o)
+			m.NestedAttributes = no
 			m.Attribute = tfschema.ListNestedAttribute{
 				NestedObject: tfschema.NestedAttributeObject{
 					Attributes: convertToMap(no),
@@ -277,30 +342,32 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 				Required:            required,
 				Optional:            !required,
 			}
-			m.NestedAttributes = no
+			m.DatasourceAttribute = dsschema.ListNestedAttribute{
+				NestedObject: dsschema.NestedAttributeObject{
+					Attributes: convertToMapForDatasource(no),
+				},
+				MarkdownDescription: prop.Description,
+				Computed:            true,
+			}
 		} else {
-			lt, err := listType(prop)
+			t, err := listType(prop)
 			if err != nil {
 				return nil, err
 			}
-
-			switch lt {
-			case types.NumberType:
-				m.ListItemType = NUMBER
-			case types.StringType:
-				m.ListItemType = STRING
-			case types.BoolType:
-				m.ListItemType = BOOLEAN
-			case types.Int64Type:
-				m.ListItemType = INTEGER
+			t2, err := listEnumType(prop)
+			if err != nil {
+				return nil, err
 			}
-
+			m.ListItemType = t2
 			m.Attribute = tfschema.ListAttribute{
-				ElementType:         lt,
-				MarkdownDescription: prop.Description,
-				Computed:            computed,
-				Required:            required,
-				Optional:            !required,
+				ElementType: t,
+				Computed:    computed,
+				Required:    required,
+				Optional:    !required,
+			}
+			m.DatasourceAttribute = dsschema.ListAttribute{
+				ElementType: t,
+				Computed:    true,
 			}
 		}
 	default:
@@ -325,6 +392,21 @@ func listType(prop *openapi.Schema) (attr.Type, error) {
 	}
 }
 
+func listEnumType(prop *openapi.Schema) (TypeEnum, error) {
+	switch prop.Items.Type {
+	case "string":
+		return STRING, nil
+	case "number":
+		return NUMBER, nil
+	case "boolean":
+		return BOOLEAN, nil
+	case "integer":
+		return INTEGER, nil
+	default:
+		return "", fmt.Errorf("cannot find type for %s", prop.Items.Type)
+	}
+}
+
 func checkIfRequired(requiredProps []string, propName string) bool {
 	for _, prop := range requiredProps {
 		if prop == propName {
@@ -338,6 +420,14 @@ func convertToMap(l map[string]*ResourceAttribute) map[string]tfschema.Attribute
 	attributeMap := make(map[string]tfschema.Attribute)
 	for _, attribute := range l {
 		attributeMap[attribute.TerraformName] = attribute.Attribute
+	}
+	return attributeMap
+}
+
+func convertToMapForDatasource(l map[string]*ResourceAttribute) map[string]dsschema.Attribute {
+	attributeMap := make(map[string]dsschema.Attribute)
+	for _, attribute := range l {
+		attributeMap[attribute.TerraformName] = attribute.DatasourceAttribute
 	}
 	return attributeMap
 }

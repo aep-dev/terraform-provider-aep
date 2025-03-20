@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
 )
@@ -101,6 +102,56 @@ func State(ctx context.Context, resp map[string]interface{}, plan *data.Resource
 		return nil, err
 	}
 	return plan, nil
+}
+
+func DataSourceState(ctx context.Context, resp []map[string]interface{}, plan *data.Resource, r *api.Resource) (*data.Resource, error) {
+	v := make([]data.Value, 0)
+	p := plan.Schema.Parameters()
+
+	for _, value := range resp {
+		// Generate state for each instance in the List call.
+		// We're using data.Resource just to conserve code. There's a better way to do this, I'm sure.
+		r2 := &data.Resource{
+			Values: make(map[string]data.Value),
+			Schema: plan.Schema,
+		}
+		err := data.FromJSON(value, r2, plan)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add parameters back into state.
+		// These aren't returned by the API.
+		for k := range p {
+			v, ok := plan.Values[k]
+			if ok && v.String != nil {
+				r2.Values[k] = v
+			}
+		}
+
+		v = append(v, data.Value{Object: &r2.Values})
+	}
+
+	m := map[string]data.Value{
+		"results": {
+			List: &v,
+		},
+	}
+
+	// Parameters need to be added in at the top-level too.
+	for k := range p {
+		v, ok := plan.Values[k]
+		if ok {
+			m[k] = v
+		}
+	}
+
+	return &data.Resource{
+		Schema:     plan.Schema,
+		Values:     m,
+		ObjectType: plan.ObjectType,
+	}, nil
+
 }
 
 func setId(plan *data.Resource, resp map[string]interface{}, path string) (string, error) {
