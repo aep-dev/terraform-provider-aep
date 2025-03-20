@@ -36,6 +36,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	},
 }
 
+// nolint:unused
 var testAccProtoV6ProviderFactoriesWithRoblox = map[string]func() (tfprotov6.ProviderServer, error){
 	"scaffolding": func() (tfprotov6.ProviderServer, error) {
 		gen, err := CreateGeneratedProviderData(context.TODO(), "https://raw.githubusercontent.com/Roblox/creator-docs/refs/heads/main/content/en-us/reference/cloud/cloud.docs.json", "/cloud/v2")
