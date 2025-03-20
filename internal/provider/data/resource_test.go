@@ -20,7 +20,7 @@ func TestResource_symmetry(t *testing.T) {
 		{
 			TestCase: "basic",
 			Resource: Resource{
-				objectType: tftypes.Object{
+				ObjectType: tftypes.Object{
 					AttributeTypes: map[string]tftypes.Type{
 						"number": tftypes.Number,
 					},
@@ -33,7 +33,7 @@ func TestResource_symmetry(t *testing.T) {
 		{
 			TestCase: "missing_object",
 			Resource: Resource{
-				objectType: tftypes.Object{
+				ObjectType: tftypes.Object{
 					AttributeTypes: map[string]tftypes.Type{
 						"object": tftypes.Object{
 							AttributeTypes: map[string]tftypes.Type{
@@ -48,7 +48,7 @@ func TestResource_symmetry(t *testing.T) {
 		{
 			TestCase: "missing_object_attribute",
 			Resource: Resource{
-				objectType: tftypes.Object{
+				ObjectType: tftypes.Object{
 					AttributeTypes: map[string]tftypes.Type{
 						"object": tftypes.Object{
 							AttributeTypes: map[string]tftypes.Type{
@@ -67,7 +67,7 @@ func TestResource_symmetry(t *testing.T) {
 		{
 			TestCase: "missing_list",
 			Resource: Resource{
-				objectType: tftypes.Object{
+				ObjectType: tftypes.Object{
 					AttributeTypes: map[string]tftypes.Type{
 						"list": tftypes.List{
 							ElementType: tftypes.Number,
@@ -80,7 +80,7 @@ func TestResource_symmetry(t *testing.T) {
 		{
 			TestCase: "empty_list",
 			Resource: Resource{
-				objectType: tftypes.Object{
+				ObjectType: tftypes.Object{
 					AttributeTypes: map[string]tftypes.Type{
 						"list": tftypes.List{
 							ElementType: tftypes.Number,
@@ -97,7 +97,7 @@ func TestResource_symmetry(t *testing.T) {
 		{
 			TestCase: "missing_map",
 			Resource: Resource{
-				objectType: tftypes.Object{
+				ObjectType: tftypes.Object{
 					AttributeTypes: map[string]tftypes.Type{
 						"map": tftypes.Map{
 							ElementType: tftypes.Number,
@@ -110,7 +110,7 @@ func TestResource_symmetry(t *testing.T) {
 		{
 			TestCase: "missing_set",
 			Resource: Resource{
-				objectType: tftypes.Object{
+				ObjectType: tftypes.Object{
 					AttributeTypes: map[string]tftypes.Type{
 						"set": tftypes.Set{
 							ElementType: tftypes.Number,
@@ -150,7 +150,7 @@ func checkSymmetry(t *testing.T, resource Resource) {
 		t.Fatalf("found unexpected error in ToTerraform5Value(): %v", err)
 	}
 
-	value := tftypes.NewValue(resource.objectType, raw)
+	value := tftypes.NewValue(resource.ObjectType, raw)
 	actual := Resource{}
 	err = actual.FromTerraform5Value(value)
 	if err != nil {
