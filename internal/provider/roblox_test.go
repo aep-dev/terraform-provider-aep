@@ -28,7 +28,7 @@ func TestRobloxDataSource(t *testing.T) {
 }
 
 func testDSData() string {
-	return fmt.Sprintf(`
+	return `
 provider "scaffolding" {
   headers = {}
 }
@@ -37,5 +37,5 @@ data "scaffolding_data-store-entry" "ds" {
   universe_id = "null"
   data_store_id = "loop-test"	
 }
-`)
+)
 }
