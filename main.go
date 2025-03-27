@@ -11,9 +11,9 @@ import (
 	"net/http"
 
 	"github.com/aep-dev/aep-lib-go/pkg/client"
+	"github.com/aep-dev/terraform-provider-aep/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider"
 )
 
 var (
