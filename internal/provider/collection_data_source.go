@@ -10,9 +10,9 @@ import (
 	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/client"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
+	"github.com/aep-dev/terraform-provider-aep/internal/provider/data"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
 )
 
 // TODO:

@@ -10,11 +10,11 @@ import (
 	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/client"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
+	"github.com/aep-dev/terraform-provider-aep/internal/provider/data"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

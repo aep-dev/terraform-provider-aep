@@ -6,7 +6,7 @@ import (
 
 	"github.com/aep-dev/aep-lib-go/pkg/api"
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
-	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider/data"
+	"github.com/aep-dev/terraform-provider-aep/internal/provider/data"
 )
 
 type GeneratedProviderData struct {
