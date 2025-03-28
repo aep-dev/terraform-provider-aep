@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/aep-dev/aep-lib-go/pkg/client"
+	"github.com/aep-dev/terraform-provider-aep/config"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -31,7 +32,7 @@ type ScaffoldingProvider struct {
 
 	client *client.Client
 
-	config ProviderConfig
+	config config.ProviderConfig
 }
 
 // ScaffoldingProviderModel describes the provider data model.
@@ -94,7 +95,7 @@ func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.F
 	return []func() function.Function{}
 }
 
-func New(version string, g *GeneratedProviderData, client *client.Client, config ProviderConfig) func() provider.Provider {
+func New(version string, g *GeneratedProviderData, client *client.Client, config config.ProviderConfig) func() provider.Provider {
 	return func() provider.Provider {
 		return &ScaffoldingProvider{
 			version:   version,

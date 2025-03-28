@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/aep-dev/aep-lib-go/pkg/client"
+	"github.com/aep-dev/terraform-provider-aep/config"
 	"github.com/aep-dev/terraform-provider-aep/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -19,9 +20,7 @@ import (
 var (
 	// these will be set by the goreleaser configuration
 	// to appropriate values for the compiled binary.
-	version    string = "dev"
-	path       string = "https://raw.githubusercontent.com/Roblox/creator-docs/refs/heads/main/content/en-us/reference/cloud/cloud.docs.json"
-	pathPrefix string = "/cloud/v2"
+	version string = "dev"
 
 	// goreleaser can pass other information to the main package, such as the specific commit
 	// https://goreleaser.com/cookbooks/using-main.version/
@@ -29,6 +28,8 @@ var (
 
 func main() {
 	var debug bool
+
+	config := config.NewProviderConfig()
 
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
@@ -41,7 +42,7 @@ func main() {
 		Debug:   debug,
 	}
 
-	gen, err := provider.CreateGeneratedProviderData(context.Background(), path, pathPrefix)
+	gen, err := provider.CreateGeneratedProviderData(context.Background(), config.OpenAPIPath(), config.PathPrefix())
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -54,7 +55,7 @@ func main() {
 
 	c.ResponseLoggingFunction = func(ctx context.Context, resp *http.Response, args ...any) {}
 
-	err = providerserver.Serve(context.Background(), provider.New(version, gen, c, provider.NewProviderConfig()), opts)
+	err = providerserver.Serve(context.Background(), provider.New(version, gen, c, config), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())
