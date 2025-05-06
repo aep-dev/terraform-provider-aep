@@ -1,18 +1,8 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# AEP Terraform Provider
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
+The AEP Terraform Provider generates a run-time Terraform provider for use with AEP-compliant APIs.
 
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
-
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
-
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
-
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
-
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
+For more information about the AEP project, visit [aep.dev](https://aep.dev)
 
 ## Requirements
 
@@ -29,25 +19,45 @@ Once you've written your provider, you'll want to [publish it on the Terraform R
 go install
 ```
 
-## Adding Dependencies
+## Configuring the provider
 
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
+The provider can be configured by modifying the following variables in `config/config.go`. When building a version of the provider for distribution, all of these should be hard-coded and not set with environment variables.
 
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
+- `OpenAPIPath`: The URI where your OpenAPI spec lives. This can also be set via the `AEP_OPENAPI` environment variable.
+- `PathPrefix`: A path prefix that will be prepended to all OpenAPI methods. This can also be set via the `AEP_PATH_PREFIX` environment variable.
+- `ProviderPrefix`: The name prefix for your provider. All resources will have the format `prefix_resource`.
+- `RegistryURL`: The URL for your provider in the Terraform Registry.
 
-```shell
-go get github.com/author/dependency
-go mod tidy
+Example configuration:
+```go
+const OpenAPIPath = "http://api.example.com/openapi.json"
+const PathPrefix = "/api/v1"
+const ProviderPrefix = "mycompany"
+const RegistryURL = "registry.terraform.io/mycompany/myprovider"
 ```
-
-Then commit the changes to `go.mod` and `go.sum`.
 
 ## Using the provider
 
-This provider automatically generates its schema based off the OpenAPI spec defined in main.go
+This provider automatically generates its schema based off the AEP-compliant OpenAPI spec.
 
-`terraform providers schema -json` will show the current schema
+`terraform providers schema -json` will show the current schema.
+
+## Authentication
+
+The provider supports setting custom headers for API requests through the provider configuration. This is useful for setting authentication tokens, API keys, or other required headers.
+
+Example configuration in `provider.tf`:
+
+```hcl
+provider "scaffolding" {
+  headers = {
+    "Authorization" = "Bearer your-token-here"
+    "X-API-Key"     = "your-api-key"
+  }
+}
+```
+
+These headers will be sent with every request made by the provider to the API.
 
 
 ## Developing the Provider Locally
