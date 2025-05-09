@@ -8,14 +8,16 @@ import (
 	"github.com/aep-dev/aep-lib-go/pkg/openapi"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	dsschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	tfschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func TestSchemaAttributes(t *testing.T) {
 	tests := map[string]struct {
-		schema openapi.Schema
-		want   *ResourceSchema
+		schema   openapi.Schema
+		resource *api.Resource
+		want     *ResourceSchema
 	}{
 		"simple": {
 			schema: openapi.Schema{
@@ -30,6 +32,12 @@ func TestSchemaAttributes(t *testing.T) {
 					},
 				},
 			},
+			resource: &api.Resource{
+				CreateMethod: &api.CreateMethod{
+					SupportsUserSettableCreate: true,
+				},
+				PatternElems: []string{},
+			},
 			want: &ResourceSchema{
 				Attributes: map[string]*ResourceAttribute{
 					"foo": {
@@ -41,6 +49,10 @@ func TestSchemaAttributes(t *testing.T) {
 							MarkdownDescription: "foo description",
 							Optional:            true,
 						},
+						DatasourceAttribute: dsschema.StringAttribute{
+							MarkdownDescription: "foo description",
+							Computed:            true,
+						},
 					},
 					"id": {
 						TerraformName: "id",
@@ -49,6 +61,10 @@ func TestSchemaAttributes(t *testing.T) {
 						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
 							Optional:            true,
+							MarkdownDescription: "The id of the resource",
+						},
+						DatasourceAttribute: dsschema.StringAttribute{
+							Computed:            true,
 							MarkdownDescription: "The id of the resource",
 						},
 					},
@@ -65,6 +81,12 @@ func TestSchemaAttributes(t *testing.T) {
 				},
 				Required: []string{"foo"},
 			},
+			resource: &api.Resource{
+				CreateMethod: &api.CreateMethod{
+					SupportsUserSettableCreate: false,
+				},
+				PatternElems: []string{},
+			},
 			want: &ResourceSchema{
 				Attributes: map[string]*ResourceAttribute{
 					"foo": {
@@ -76,6 +98,10 @@ func TestSchemaAttributes(t *testing.T) {
 							MarkdownDescription: "foo description",
 							Required:            true,
 						},
+						DatasourceAttribute: dsschema.StringAttribute{
+							MarkdownDescription: "foo description",
+							Computed:            true,
+						},
 					},
 					"id": {
 						TerraformName: "id",
@@ -83,6 +109,10 @@ func TestSchemaAttributes(t *testing.T) {
 						Parameter:     true,
 						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
+							Computed:            true,
+							MarkdownDescription: "The id of the resource.",
+						},
+						DatasourceAttribute: dsschema.StringAttribute{
 							Computed:            true,
 							MarkdownDescription: "The id of the resource.",
 						},
@@ -101,9 +131,14 @@ func TestSchemaAttributes(t *testing.T) {
 								Description: "bar description",
 							},
 						},
-						Required: []string{"bar"},
 					},
 				},
+			},
+			resource: &api.Resource{
+				CreateMethod: &api.CreateMethod{
+					SupportsUserSettableCreate: false,
+				},
+				PatternElems: []string{},
 			},
 			want: &ResourceSchema{
 				Attributes: map[string]*ResourceAttribute{
@@ -113,24 +148,36 @@ func TestSchemaAttributes(t *testing.T) {
 						Parameter:     false,
 						Type:          OBJECT,
 						Attribute: tfschema.SingleNestedAttribute{
+							Optional: true,
 							Attributes: map[string]tfschema.Attribute{
 								"bar": tfschema.StringAttribute{
+									Optional:            true,
 									MarkdownDescription: "bar description",
-									Required:            true,
-									Optional:            false,
 								},
 							},
-							MarkdownDescription: "",
-							Optional:            true,
+						},
+						DatasourceAttribute: dsschema.SingleNestedAttribute{
+							Computed: true,
+							Attributes: map[string]dsschema.Attribute{
+								"bar": dsschema.StringAttribute{
+									Computed:            true,
+									MarkdownDescription: "bar description",
+								},
+							},
 						},
 						NestedAttributes: map[string]*ResourceAttribute{
 							"bar": {
 								TerraformName: "bar",
 								JSONName:      "bar",
+								Parameter:     false,
 								Type:          STRING,
 								Attribute: tfschema.StringAttribute{
-									Required:            true,
 									MarkdownDescription: "bar description",
+									Optional:            true,
+								},
+								DatasourceAttribute: dsschema.StringAttribute{
+									MarkdownDescription: "bar description",
+									Computed:            true,
 								},
 							},
 						},
@@ -141,6 +188,10 @@ func TestSchemaAttributes(t *testing.T) {
 						Parameter:     true,
 						Type:          STRING,
 						Attribute: tfschema.StringAttribute{
+							Computed:            true,
+							MarkdownDescription: "The id of the resource.",
+						},
+						DatasourceAttribute: dsschema.StringAttribute{
 							Computed:            true,
 							MarkdownDescription: "The id of the resource.",
 						},
@@ -159,6 +210,12 @@ func TestSchemaAttributes(t *testing.T) {
 					},
 				},
 			},
+			resource: &api.Resource{
+				CreateMethod: &api.CreateMethod{
+					SupportsUserSettableCreate: false,
+				},
+				PatternElems: []string{},
+			},
 			want: &ResourceSchema{
 				Attributes: map[string]*ResourceAttribute{
 					"foo": {
@@ -168,9 +225,14 @@ func TestSchemaAttributes(t *testing.T) {
 						Type:          ARRAY,
 						ListItemType:  STRING,
 						Attribute: tfschema.ListAttribute{
-							ElementType:         types.StringType,
 							MarkdownDescription: "",
 							Optional:            true,
+							ElementType:         types.StringType,
+						},
+						DatasourceAttribute: dsschema.ListAttribute{
+							MarkdownDescription: "",
+							Computed:            true,
+							ElementType:         types.StringType,
 						},
 					},
 					"id": {
@@ -182,6 +244,10 @@ func TestSchemaAttributes(t *testing.T) {
 							Computed:            true,
 							MarkdownDescription: "The id of the resource.",
 						},
+						DatasourceAttribute: dsschema.StringAttribute{
+							Computed:            true,
+							MarkdownDescription: "The id of the resource.",
+						},
 					},
 				},
 			},
@@ -190,7 +256,8 @@ func TestSchemaAttributes(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := NewResourceSchema(context.TODO(), &api.Resource{Schema: &tt.schema, PatternElems: make([]string, 0)}, &openapi.OpenAPI{})
+			tt.resource.Schema = &tt.schema
+			got, err := NewResourceSchema(context.TODO(), tt.resource, &openapi.OpenAPI{})
 			if err != nil {
 				t.Errorf("SchemaAttributes() error = %v", err)
 				return
