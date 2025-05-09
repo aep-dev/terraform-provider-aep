@@ -12,7 +12,7 @@ import (
 
 	"github.com/aep-dev/aep-lib-go/pkg/client"
 	"github.com/aep-dev/terraform-provider-aep/config"
-	"github.com/aep-dev/terraform-provider-aep/internal/provider"
+	"github.com/aep-dev/terraform-provider-aep/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -29,24 +29,11 @@ var (
 func main() {
 	var debug bool
 
-	config := config.NewProviderConfig()
-
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	opts := providerserver.ServeOpts{
-		// TODO: Update this string with the published name of your provider.
-		// Also update the tfplugindocs generate command to either remove the
-		// -provider-name flag or set its value to the updated provider name.
-		Address: "registry.terraform.io/hashicorp/scaffolding",
-		Debug:   debug,
-	}
-
-	gen, err := provider.CreateGeneratedProviderData(context.Background(), config.OpenAPIPath(), config.PathPrefix())
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
+	// Setup config and HTTP Client.
+	config := config.NewProviderConfig()
 	c := client.NewClient(http.DefaultClient)
 
 	c.RequestLoggingFunction = func(ctx context.Context, req *http.Request, args ...any) {
@@ -55,7 +42,19 @@ func main() {
 
 	c.ResponseLoggingFunction = func(ctx context.Context, resp *http.Response, args ...any) {}
 
-	err = providerserver.Serve(context.Background(), provider.New(version, gen, c, config), opts)
+	// Create the AEP-Terraform provider.
+	p, err := provider.NewProvider(&config, c, version)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	opts := providerserver.ServeOpts{
+		Address: "registry.terraform.io/hashicorp/scaffolding",
+		Debug:   debug,
+	}
+
+	// Serve the provider.
+	err = providerserver.Serve(context.Background(), p.Provider, opts)
 
 	if err != nil {
 		log.Fatal(err.Error())
