@@ -36,13 +36,19 @@ func (p *Provider) Provider() tfprovider.Provider {
 }
 
 func (p *Provider) Resources(ctx context.Context) []func() resource.Resource {
-	return p.provider.(interface {
+	if provider, ok := p.provider.(interface {
 		Resources(context.Context) []func() resource.Resource
-	}).Resources(ctx)
+	}); ok {
+		return provider.Resources(ctx)
+	}
+	return nil
 }
 
 func (p *Provider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return p.provider.(interface {
+	if provider, ok := p.provider.(interface {
 		DataSources(context.Context) []func() datasource.DataSource
-	}).DataSources(ctx)
+	}); ok {
+		return provider.DataSources(ctx)
+	}
+	return nil
 }
