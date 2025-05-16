@@ -1,6 +1,6 @@
 # AEP Terraform Provider
 
-The AEP Terraform Provider generates a run-time Terraform provider for use with AEP-compliant APIs.
+The AEP Terraform Provider generates a run-time Terraform provider for use with AEP-compliant APIs. This allows API developers who have created AEP-compliant APIs to create or extend a Terraform provider with new resources with near-zero additional development time.
 
 For more information about the AEP project, visit [aep.dev](https://aep.dev)
 
@@ -11,30 +11,7 @@ For more information about the AEP project, visit [aep.dev](https://aep.dev)
 
 ## Building The Provider
 
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
-
-```shell
-go install
-```
-
-## Configuring the provider
-
-The provider can be configured by modifying the following variables in `config/config.go`. When building a version of the provider for distribution, all of these should be hard-coded and not set with environment variables.
-
-- `OpenAPIPath`: The URI where your OpenAPI spec lives. This can also be set via the `AEP_OPENAPI` environment variable.
-- `PathPrefix`: A path prefix that will be prepended to all OpenAPI methods. This can also be set via the `AEP_PATH_PREFIX` environment variable.
-- `ProviderPrefix`: The name prefix for your provider. All resources will have the format `prefix_resource`.
-- `RegistryURL`: The URL for your provider in the Terraform Registry.
-
-Example configuration:
-```go
-const OpenAPIPath = "http://api.example.com/openapi.json"
-const PathPrefix = "/api/v1"
-const ProviderPrefix = "mycompany"
-const RegistryURL = "registry.terraform.io/mycompany/myprovider"
-```
+This repository is a library that provides both a Terraform provider and Terraform resources. Please see `examples/main.go` to see how to create a new provider.
 
 ## Using the provider
 
