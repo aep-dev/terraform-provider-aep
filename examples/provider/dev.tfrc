@@ -1,0 +1,5 @@
+provider_installation {
+  dev_overrides {
+    "hashicorp/scaffolding" = "/Users/astephen/go/bin"
+  }
+}
