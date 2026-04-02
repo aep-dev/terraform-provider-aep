@@ -24,7 +24,7 @@ func aepbaseProviderFactory() map[string]func() (tfprotov6.ProviderServer, error
 				return nil, fmt.Errorf("unable to create generated data from %s: %v", openAPIURL, err)
 			}
 			httpClient := client.NewClient(&http.Client{})
-			providerConfig := config.NewProviderConfigForTesting(openAPIURL, "", "", "scaffolding")
+			providerConfig := config.NewProviderConfigWithOptions(openAPIURL, "", "", "scaffolding")
 			return providerserver.NewProtocol6WithError(New("test", gen, httpClient, providerConfig)())()
 		},
 	}
