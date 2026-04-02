@@ -29,7 +29,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 			return nil, fmt.Errorf("unable to create generated data %v", err)
 		}
 		mockClient := client.NewClient(&http.Client{})
-		providerConfig := config.NewProviderConfigForTesting("http://localhost:8081/openapi.json", "", "", "scaffolding")
+		providerConfig := config.NewProviderConfigWithOptions("http://localhost:8081/openapi.json", "", "", "scaffolding")
 		return providerserver.NewProtocol6WithError(New("test", gen, mockClient, providerConfig)())()
 	},
 }
@@ -42,7 +42,7 @@ var testAccProtoV6ProviderFactoriesWithRoblox = map[string]func() (tfprotov6.Pro
 			return nil, fmt.Errorf("unable to create generated data %v", err)
 		}
 		mockClient := client.NewClient(&http.Client{})
-		providerConfig := config.NewProviderConfigForTesting("http://localhost:8081/openapi.json", "", "", "scaffolding")
+		providerConfig := config.NewProviderConfigWithOptions("http://localhost:8081/openapi.json", "", "", "scaffolding")
 		return providerserver.NewProtocol6WithError(New("test", gen, mockClient, providerConfig)())()
 	},
 }

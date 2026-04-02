@@ -2,11 +2,11 @@ package config
 
 import "os"
 
-// Only change these values.
+// Only change these values when using this package as a library.
 
 // The URI where your OpenAPI spec lives.
 // This will default to AEP_OPENAPI if empty.
-const OpenAPIPath = "http://localhost:8081/openapi.json"
+const OpenAPIPath = ""
 
 // A Path prefix.
 // This is a value that will prepend all of your OpenAPI methods
@@ -16,11 +16,11 @@ const PathPrefix = ""
 
 // The name of your provider.
 // All resources will have the prefix `prefix_resource`.
-const ProviderPrefix = "scaffolding"
+const ProviderPrefix = "aep"
 
 // The URL for your provider.
 // This should be set once you have a listing in the Terraform Registry.
-const RegistryURL = "registry.terraform.io/hashicorp/scaffolding"
+const RegistryURL = "registry.terraform.io/aep-dev/aep"
 
 // Do not change anything below here!
 
@@ -55,8 +55,9 @@ func NewProviderConfig() ProviderConfig {
 	}
 }
 
-// Only for testing!
-func NewProviderConfigForTesting(openAPI string, pathPrefix string, registryUrl string, providerPrefix string) ProviderConfig {
+// NewProviderConfigWithOptions creates a ProviderConfig with explicit values.
+// Use this when embedding the provider as a library.
+func NewProviderConfigWithOptions(openAPI string, pathPrefix string, registryUrl string, providerPrefix string) ProviderConfig {
 	return ProviderConfig{
 		openAPIPath:    openAPI,
 		pathPrefix:     pathPrefix,

@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package main
 
 import (
@@ -18,12 +15,7 @@ import (
 )
 
 var (
-	// these will be set by the goreleaser configuration
-	// to appropriate values for the compiled binary.
 	version string = "dev"
-
-	// goreleaser can pass other information to the main package, such as the specific commit
-	// https://goreleaser.com/cookbooks/using-main.version/
 )
 
 func main() {
@@ -32,14 +24,7 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	// Setup config and HTTP Client.
-	// When using as a library, provide your own values here.
-	cfg := config.NewProviderConfigWithOptions(
-		"http://localhost:8081/openapi.json", // openAPIPath
-		"",                                   // pathPrefix
-		"registry.terraform.io/hashicorp/scaffolding", // registryURL
-		"scaffolding", // providerPrefix
-	)
+	cfg := config.NewProviderConfig()
 	c := client.NewClient(http.DefaultClient)
 
 	c.RequestLoggingFunction = func(ctx context.Context, req *http.Request, args ...any) {
@@ -48,7 +33,6 @@ func main() {
 
 	c.ResponseLoggingFunction = func(ctx context.Context, resp *http.Response, args ...any) {}
 
-	// Create the AEP-Terraform provider.
 	p, err := provider.NewProvider(&cfg, c, version)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -59,9 +43,7 @@ func main() {
 		Debug:   debug,
 	}
 
-	// Serve the provider.
 	err = providerserver.Serve(context.Background(), p.Provider, opts)
-
 	if err != nil {
 		log.Fatal(err.Error())
 	}
