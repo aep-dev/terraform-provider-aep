@@ -95,14 +95,14 @@ func TestIntegrationResources(t *testing.T) {
 			},
 			// Create publisher
 			{
-				Config: resourceDefinitionConfig() + testExamplePublisherConfig("my-pub", "pub-description"),
+				Config: resourceDefinitionConfig() + testExamplePublisherConfig("pub-description"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("scaffolding_publisher.my-pub", "description", "pub-description"),
 				),
 			},
 			// Update publisher
 			{
-				Config: resourceDefinitionConfig() + testExamplePublisherConfig("my-pub", "pub-description2"),
+				Config: resourceDefinitionConfig() + testExamplePublisherConfig("pub-description2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("scaffolding_publisher.my-pub", "description", "pub-description2"),
 				),
