@@ -18,7 +18,7 @@ func TestPublisherResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testExamplePublisherConfig("my-pub", "pub-description"),
+				Config: testExamplePublisherConfig("pub-description"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("scaffolding_publisher.my-pub", "description", "pub-description"),
 					resource.TestCheckResourceAttr("scaffolding_publisher.my-pub", "path", "/publishers/1"),
@@ -33,7 +33,7 @@ func TestPublisherResource(t *testing.T) {
 			},
 			// Update and Read testing
 			{
-				Config: testExamplePublisherConfig("my-pub", "pub-description2"),
+				Config: testExamplePublisherConfig("pub-description2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("scaffolding_publisher.my-pub", "description", "pub-description2"),
 					resource.TestCheckResourceAttr("scaffolding_publisher.my-pub", "path", "/publishers/1"),
@@ -75,12 +75,12 @@ func TestBookResource(t *testing.T) {
 	})
 }
 
-func testExamplePublisherConfig(publisher string, description string) string {
+func testExamplePublisherConfig(description string) string {
 	return fmt.Sprintf(`
-resource "scaffolding_publisher" %[1]q {
-  description = %[2]q
+resource "scaffolding_publisher" "my-pub" {
+  description = %[1]q
 }
-`, publisher, description)
+`, description)
 }
 
 func testExampleBookConfig(book string, price string, publisher string) string {

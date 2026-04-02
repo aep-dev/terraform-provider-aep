@@ -6,6 +6,7 @@
 package data
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -115,6 +116,13 @@ func ConvertValue(v Value, a *ResourceAttribute) (interface{}, error) {
 		return v.Number.String(), nil
 	}
 	if v.String != nil {
+		if a.Type == JSON_OBJECT {
+			var parsed interface{}
+			if err := json.Unmarshal([]byte(*v.String), &parsed); err != nil {
+				return nil, fmt.Errorf("failed to parse JSON object string: %v", err)
+			}
+			return parsed, nil
+		}
 		return *v.String, nil
 	}
 	if v.List != nil {
@@ -213,6 +221,13 @@ func ConvertTypeToValue(v interface{}, r *ResourceAttribute, planValue Value) (V
 			return Value{}, fmt.Errorf("expected integer, got %T", v)
 		}
 		return Value{Number: big.NewFloat(float64(intNum))}, nil
+	case JSON_OBJECT:
+		jsonBytes, err := json.Marshal(v)
+		if err != nil {
+			return Value{}, fmt.Errorf("failed to marshal JSON object: %v", err)
+		}
+		str := string(jsonBytes)
+		return Value{String: &str}, nil
 	case OBJECT:
 		objectJSON := make(map[string]Value)
 		mapValue, ok := v.(map[string]interface{})
@@ -246,6 +261,9 @@ func ConvertTypeToValue(v interface{}, r *ResourceAttribute, planValue Value) (V
 		}
 		return Value{Object: &objectJSON}, nil
 	case ARRAY:
+		if v == nil {
+			return Value{}, nil
+		}
 		arrayValue, ok := v.([]interface{})
 		if !ok {
 			return Value{}, fmt.Errorf("expected array, got %T", v)

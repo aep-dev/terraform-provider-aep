@@ -36,12 +36,13 @@ func FindAttributeByJSONName(name string, attributes map[string]*ResourceAttribu
 type TypeEnum string
 
 const (
-	STRING  TypeEnum = "string"
-	NUMBER  TypeEnum = "number"
-	BOOLEAN TypeEnum = "boolean"
-	INTEGER TypeEnum = "integer"
-	OBJECT  TypeEnum = "object"
-	ARRAY   TypeEnum = "array"
+	STRING      TypeEnum = "string"
+	NUMBER      TypeEnum = "number"
+	BOOLEAN     TypeEnum = "boolean"
+	INTEGER     TypeEnum = "integer"
+	OBJECT      TypeEnum = "object"
+	ARRAY       TypeEnum = "array"
+	JSON_OBJECT TypeEnum = "json_object"
 )
 
 type ResourceAttribute struct {
@@ -312,21 +313,35 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 			Computed:            true,
 		}
 	case "object":
-		m.Type = OBJECT
-		no := schemaAttributes(ctx, prop, o)
-		m.Attribute = tfschema.SingleNestedAttribute{
-			Attributes:          convertToMap(no),
-			MarkdownDescription: prop.Description,
-			Computed:            computed,
-			Required:            required,
-			Optional:            !required,
+		if len(prop.Properties) == 0 {
+			m.Type = JSON_OBJECT
+			m.Attribute = tfschema.StringAttribute{
+				MarkdownDescription: prop.Description,
+				Computed:            computed,
+				Required:            required,
+				Optional:            !required,
+			}
+			m.DatasourceAttribute = dsschema.StringAttribute{
+				MarkdownDescription: prop.Description,
+				Computed:            true,
+			}
+		} else {
+			m.Type = OBJECT
+			no := schemaAttributes(ctx, prop, o)
+			m.Attribute = tfschema.SingleNestedAttribute{
+				Attributes:          convertToMap(no),
+				MarkdownDescription: prop.Description,
+				Computed:            computed,
+				Required:            required,
+				Optional:            !required,
+			}
+			m.DatasourceAttribute = dsschema.SingleNestedAttribute{
+				Attributes:          convertToMapForDatasource(no),
+				MarkdownDescription: prop.Description,
+				Computed:            true,
+			}
+			m.NestedAttributes = no
 		}
-		m.DatasourceAttribute = dsschema.SingleNestedAttribute{
-			Attributes:          convertToMapForDatasource(no),
-			MarkdownDescription: prop.Description,
-			Computed:            true,
-		}
-		m.NestedAttributes = no
 	case "array":
 		m.Type = ARRAY
 		if prop.Items.Type == "object" {
