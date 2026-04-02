@@ -52,6 +52,8 @@ type ResourceAttribute struct {
 	JSONName string
 	// If true, this attribute is not sent across the wire.
 	Parameter bool
+	// If true, this is a read-only field.
+	Computed bool
 	// The type of this resource attribute.
 	Type TypeEnum
 	// Only set for ARRAY types.
@@ -160,6 +162,7 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 			schema.Attributes["id"] = &ResourceAttribute{
 				TerraformName: "id",
 				JSONName:      "id",
+				Computed:      false,
 				Parameter:     false,
 				Type:          STRING,
 				Attribute: tfschema.StringAttribute{
@@ -176,6 +179,7 @@ func NewResourceSchema(ctx context.Context, r *api.Resource, o *openapi.OpenAPI)
 				TerraformName: "id",
 				JSONName:      "id",
 				Parameter:     true,
+				Computed:      false,
 				Type:          STRING,
 				Attribute: tfschema.StringAttribute{
 					Computed:            true,
@@ -219,6 +223,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 		TerraformName: strings.Replace(ToSnakeCase(name), "@", "", -1),
 		JSONName:      name,
 		Parameter:     false,
+		Computed:      prop.ReadOnly,
 	}
 	required := checkIfRequired(requiredProps, name)
 
@@ -261,6 +266,7 @@ func schemaAttribute(ctx context.Context, prop *openapi.Schema, name string, req
 	// If ID is not settable, path should be computed regardless.
 	if name == "path" {
 		computed = true
+		m.Computed = true
 	}
 
 	switch prop.Type {
